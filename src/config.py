@@ -25,10 +25,16 @@ class ChromeConfig:
     def __post_init__(self):
         if self.user_agents is None:
             self.user_agents = [
+                # Mac ARM64 (Apple Silicon) - Primary for your system
+                "Mozilla/5.0 (Macintosh; ARM Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; ARM Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; ARM Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+                # Mac Intel (fallback)
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+                # Windows (diversity)
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                # Linux (diversity)
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             ]
 
@@ -38,9 +44,9 @@ class MonitoringConfig:
     """Monitoring configuration"""
     url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/"
     target_url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/"
-    base_interval: int = 20  # seconds
-    min_random_delay: int = 5  # seconds
-    max_random_delay: int = 10  # seconds
+    base_interval: int = 45  # seconds (increased from 20)
+    min_random_delay: int = 10  # seconds (increased from 5)
+    max_random_delay: int = 20  # seconds (increased from 10)
     max_retries: int = 3
     timeout: int = 30
 
@@ -77,8 +83,8 @@ class AntiDetectionConfig:
     def __post_init__(self):
         if self.additional_headers is None:
             self.additional_headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Accept-Encoding": "gzip, deflate, br",
                 "DNT": "1",
                 "Connection": "keep-alive",
@@ -86,7 +92,13 @@ class AntiDetectionConfig:
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",
                 "Sec-Fetch-Site": "none",
-                "Cache-Control": "max-age=0"
+                "Sec-Fetch-User": "?1",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"macOS"',
+                "Cache-Control": "max-age=0",
+                "sec-ch-ua-full-version": '"120.0.6099.109"',
+                "sec-ch-ua-platform-version": '"14.1.0"'
             }
 
 

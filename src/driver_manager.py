@@ -45,6 +45,9 @@ class DriverManager:
             logger.debug("⏱️  Setting implicit wait: 10s")
             self.driver.implicitly_wait(10)
             
+            # Enable cookies and verify they work
+            self._ensure_cookies_enabled()
+            
             logger.info("✅ ChromeDriver started successfully")
             logger.debug(f"🔧 Driver capabilities: {self.driver.capabilities}")
             return self.driver
@@ -66,6 +69,12 @@ class DriverManager:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument(f"--window-size={config.chrome.window_size}")
+        
+        # Enable cookies and local storage (important for Cloudflare)
+        logger.debug("🔧 Enabling cookies and storage...")
+        options.add_argument("--enable-cookies")
+        options.add_argument("--enable-local-storage")
+        options.add_argument("--enable-session-storage")
         
         # Rotating user agent
         user_agent = anti_detection.get_next_user_agent()
@@ -94,6 +103,14 @@ class DriverManager:
         logger.debug("🔧 Adding network configurations...")
         options.add_argument("--disable-web-security")
         options.add_argument("--allow-running-insecure-content")
+        
+        # Additional human-like behaviors
+        logger.debug("🔧 Adding human-like behaviors...")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-features=TranslateUI")
+        options.add_argument("--disable-ipc-flooding-protection")
         
         logger.debug(f"🔧 Chrome options created with {len(options.arguments)} arguments")
         
@@ -354,3 +371,32 @@ class DriverManager:
             
         except Exception as e:
             logger.error(f"❌ Error analyzing blocked page: {e}") 
+
+    def _ensure_cookies_enabled(self):
+        """Ensures cookies are properly enabled and working"""
+        try:
+            if not self.driver:
+                logger.warning("⚠️  Driver not available for cookie verification")
+                return
+                
+            logger.debug("🍪 Verifying cookies are enabled...")
+            
+            # Test cookies by setting a test cookie
+            self.driver.get("data:text/html,<html><body>Cookie Test</body></html>")
+            self.driver.add_cookie({
+                'name': 'test_cookie',
+                'value': 'enabled',
+                'domain': 'localhost'
+            })
+            
+            # Verify cookie was set
+            cookies = self.driver.get_cookies()
+            test_cookie = next((c for c in cookies if c['name'] == 'test_cookie'), None)
+            
+            if test_cookie:
+                logger.debug("✅ Cookies are working properly")
+            else:
+                logger.warning("⚠️  Cookies may not be working properly")
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Could not verify cookies: {e}") 
