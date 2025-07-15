@@ -81,8 +81,6 @@ class DriverManager:
         # Anti-detection configurations
         logger.debug("🔧 Adding anti-detection configurations...")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
         
         # Additional headers
         if config.anti_detection.additional_headers:
