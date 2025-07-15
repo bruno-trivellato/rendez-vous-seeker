@@ -8,6 +8,7 @@ import os
 import subprocess
 from datetime import datetime
 from typing import Optional
+from logging.handlers import RotatingFileHandler
 from .config import config
 
 
@@ -18,26 +19,38 @@ class Logger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(config.logging.level.value)
         
+        # Prevent duplicate handlers
+        if self.logger.handlers:
+            return
+        
         # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(config.logging.level.value)
         
         # Log format
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        formatter = logging.Formatter(config.logging.log_format)
         console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
         
-        # Add handler if it doesn't exist
-        if not self.logger.handlers:
-            self.logger.addHandler(console_handler)
-        
-        # File handler (if configured)
+        # File handler with rotation (if configured)
         if config.logging.log_to_file:
-            file_handler = logging.FileHandler(config.logging.log_file)
-            file_handler.setLevel(config.logging.level.value)
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
+            try:
+                file_handler = RotatingFileHandler(
+                    config.logging.log_file,
+                    maxBytes=config.logging.max_log_size,
+                    backupCount=config.logging.backup_count
+                )
+                file_handler.setLevel(config.logging.level.value)
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
+                self.logger.info(f"📝 File logging enabled: {config.logging.log_file}")
+            except Exception as e:
+                self.logger.error(f"❌ Failed to setup file logging: {e}")
+        
+        # Log startup information
+        self.logger.info("🚀 Logger initialized")
+        self.logger.debug(f"🔧 Log level: {config.logging.level.value}")
+        self.logger.debug(f"📁 Log file: {config.logging.log_file if config.logging.log_to_file else 'Disabled'}")
     
     def info(self, message: str):
         """Information log"""

@@ -93,11 +93,14 @@ class AntiDetectionConfig:
 @dataclass
 class LoggingConfig:
     """Logging configuration"""
-    level: LogLevel = LogLevel.INFO
+    level: LogLevel = LogLevel.DEBUG  # Changed to DEBUG for more detailed logs
     show_timestamps: bool = True
     show_check_count: bool = True
-    log_to_file: bool = False
+    log_to_file: bool = True  # Enable file logging
     log_file: str = "rdv_monitor.log"
+    log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    max_log_size: int = 10 * 1024 * 1024  # 10MB
+    backup_count: int = 5
 
 
 class Config:

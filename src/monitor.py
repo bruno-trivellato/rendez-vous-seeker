@@ -45,9 +45,12 @@ class RDVMonitor:
             logger.info(f"📍 URL: {config.monitoring.url}")
             logger.info(f"⏱️  Base interval: {config.monitoring.base_interval} seconds")
             logger.info(f"🎯 Anti-detection: {'Enabled' if config.anti_detection.enable_random_delays else 'Disabled'}")
+            logger.debug(f"🔧 User agents count: {len(config.chrome.user_agents) if config.chrome.user_agents else 0}")
+            logger.debug(f"🔧 Session rotation interval: {config.anti_detection.session_rotation_interval}")
             logger.info("🛑 Press Ctrl+C to stop\n")
             
             # Initialize the driver
+            logger.debug("🔧 Setting up ChromeDriver...")
             self.driver_manager.setup_driver()
             driver = self.driver_manager.get_driver()
             
@@ -55,49 +58,94 @@ class RDVMonitor:
                 logger.error("❌ Failed to initialize driver")
                 return
             
+            logger.debug("✅ ChromeDriver initialized successfully")
+            
             # Load the initial page
+            logger.debug(f"🌐 Loading initial page: {config.monitoring.url}")
             driver.get(config.monitoring.url)
+            logger.debug("⏳ Waiting for page to load...")
             time.sleep(3)  # Wait for initial loading
             
+            # Log detailed request/response information
+            self.driver_manager.log_request_details()
+            
+            # Log page information
+            try:
+                current_url = driver.current_url
+                page_title = driver.title
+                logger.debug(f"📄 Current URL: {current_url}")
+                logger.debug(f"📄 Page title: {page_title}")
+            except Exception as e:
+                logger.warning(f"⚠️  Could not get page info: {e}")
+            
             # First check
+            logger.debug("🔍 Generating initial page hash...")
             self.last_page_hash = self._get_page_hash(driver)
+            if self.last_page_hash:
+                logger.debug(f"🔍 Initial page hash: {self.last_page_hash[:16]}...")
+            
             logger.info("✅ Page loaded initially")
             
             # Main monitoring loop
+            logger.debug("🔄 Starting main monitoring loop...")
             self._monitoring_loop(driver)
             
         except Exception as e:
             logger.error(f"❌ Fatal error: {e}")
+            import traceback
+            logger.debug(f"📋 Full traceback: {traceback.format_exc()}")
         finally:
+            logger.debug("🛑 Cleaning up...")
             self.driver_manager.quit()
     
     def _monitoring_loop(self, driver):
         """Main monitoring loop"""
         while self.running:
             try:
+                logger.debug(f"🔄 Starting check #{self.check_count + 1}")
+                
                 # Check if session should be rotated
                 if anti_detection.should_rotate_session():
                     logger.info("🔄 Rotating session for security...")
+                    logger.debug(f"📊 Request count: {anti_detection.request_count}")
                     self.driver_manager.rotate_session()
                     driver = self.driver_manager.get_driver()
                     if driver is None:
                         logger.error("❌ Failed to get driver after rotation")
                         continue
+                    logger.debug("🌐 Loading page after session rotation...")
                     driver.get(config.monitoring.url)
                 
                 # Page refresh
                 if driver is not None:
+                    logger.debug("🔄 Refreshing page...")
                     driver.refresh()
+                    logger.debug("⏳ Waiting for page refresh...")
                     time.sleep(2)  # Wait for loading
+                    
+                    # Log request details after refresh
+                    self.driver_manager.log_request_details()
                 
                 # Detect current page type
                 if driver is not None:
+                    logger.debug("🔍 Detecting page type...")
                     page_info = page_detector.get_page_info(driver)
                     page_type = page_info["type"]
+                    logger.debug(f"📄 Page type detected: {page_type.value}")
+                    logger.debug(f"📄 Page title: {page_info.get('title', 'Unknown')}")
+                    logger.debug(f"📄 Page URL: {page_info.get('url', 'Unknown')}")
                     
                     # Generate hash of new page
+                    logger.debug("🔍 Generating page hash...")
                     current_hash = self._get_page_hash(driver)
                     self.check_count += 1
+                    
+                    if current_hash:
+                        logger.debug(f"🔍 Current page hash: {current_hash[:16]}...")
+                        if self.last_page_hash:
+                            logger.debug(f"🔍 Previous page hash: {self.last_page_hash[:16]}...")
+                            hash_changed = current_hash != self.last_page_hash
+                            logger.debug(f"🔍 Hash changed: {hash_changed}")
                     
                     timestamp = time_utils.get_timestamp()
                     
@@ -105,6 +153,10 @@ class RDVMonitor:
                     if page_type == PageType.BLOCKED:
                         logger.warning(f"🚫 [{timestamp}] BLOCKED! {page_info['description']}")
                         logger.warning(f"📋 Reason: {page_info.get('blocked_reason', 'Not specified')}")
+                        
+                        # Log detailed blocked page analysis
+                        self.driver_manager.log_blocked_page_content()
+                        
                         logger.info("⏳ Waiting before next attempt...")
                         time.sleep(30)  # Wait longer if blocked
                         continue
@@ -212,38 +264,54 @@ class RDVMonitor:
         """Generates a hash of the page content to detect changes"""
         try:
             if driver is None:
+                logger.debug("❌ Driver is None, cannot generate hash")
                 return None
                 
             # Wait for the page to load
+            logger.debug("⏳ Waiting for page body to load...")
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
             # Get the HTML of the page
+            logger.debug("📄 Getting page source...")
             page_source = driver.page_source
+            logger.debug(f"📄 Page source length: {len(page_source)} characters")
             
             # Normalize content
+            logger.debug("🔧 Normalizing content...")
             normalized_content = hash_utils.normalize_content(page_source)
+            logger.debug(f"🔧 Normalized content length: {len(normalized_content)} characters")
             
             # Remove scripts and dynamic elements
+            logger.debug("🧹 Cleaning HTML content...")
             soup = BeautifulSoup(normalized_content, 'html.parser')
             
             # Remove scripts and styles
+            scripts_removed = len(soup(["script", "style"]))
             for script in soup(["script", "style"]):
                 script.decompose()
+            logger.debug(f"🧹 Removed {scripts_removed} script/style elements")
             
             # Remove attributes that change frequently
+            attrs_removed = 0
             for tag in soup.find_all(True):
                 for attr in ['data-reactid', 'data-testid', 'id']:
                     if tag.has_attr(attr):
                         del tag[attr]
+                        attrs_removed += 1
+            logger.debug(f"🧹 Removed {attrs_removed} dynamic attributes")
             
             # Generate hash of clean content
             content = str(soup)
-            return hashlib.md5(content.encode()).hexdigest()
+            hash_result = hashlib.md5(content.encode()).hexdigest()
+            logger.debug(f"🔍 Generated hash: {hash_result[:16]}...")
+            return hash_result
             
         except Exception as e:
             logger.error(f"❌ Error generating page hash: {e}")
+            import traceback
+            logger.debug(f"📋 Hash generation traceback: {traceback.format_exc()}")
             return None
     
     def _check_availability(self, driver) -> Tuple[bool, str]:
