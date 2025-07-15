@@ -53,4 +53,12 @@ chromedriver.exe
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Audio files
+*.mp3
+*.wav
+*.aiff
+
+# Assets folder (contains audio files)
+assets/ 

@@ -20,6 +20,51 @@ The system monitors the city hall's appointment page with an intelligent state-b
 - **Change detection** in the page DOM
 - **State-based monitoring** to avoid unnecessary refreshes during captcha
 
+## 🏗️ **Architecture (Refactored)**
+
+The system has been refactored following modern Python development practices:
+
+```
+src/
+├── monitor/                 # Main monitor package
+│   ├── core.py             # RDVMonitor class (main orchestrator)
+│   ├── states.py           # MonitorState enum
+│   ├── handlers/           # Specialized handlers
+│   │   ├── captcha_handler.py      # Captcha detection & handling
+│   │   ├── availability_handler.py # Availability detection
+│   │   └── page_handlers.py        # Page type handlers
+│   └── utils/              # Utilities
+│       ├── delay_utils.py  # Delay management
+│       └── page_utils.py   # Page operations
+├── config.py               # Configuration management
+├── driver_manager.py       # Chrome driver management
+├── page_detector.py        # Page type detection
+└── utils/                  # General utilities
+```
+
+### **Benefits of Refactoring**
+- **Separation of Concerns**: Each handler has a specific responsibility
+- **Maintainability**: Changes are isolated to specific modules
+- **Testability**: Each component can be tested independently
+- **Readability**: Smaller, focused methods and classes
+- **Reusability**: Utilities can be reused across the system
+
+### **Key Components**
+
+#### **RDVMonitor (core.py)**
+- Main orchestrator class that manages the entire monitoring process
+- Handles state transitions and coordinates between different handlers
+- Manages the main monitoring loop and error handling
+
+#### **Handlers**
+- **CaptchaHandler**: Detects and manages captcha challenges
+- **AvailabilityHandler**: Monitors for available appointment slots
+- **PageHandlers**: Handles different page types (blocked, maintenance, error, etc.)
+
+#### **Utilities**
+- **DelayManager**: Manages different types of delays (smart, captcha, availability)
+- **PageUtils**: Handles page loading, refreshing, and navigation operations
+
 ## 📋 Prerequisites
 
 - **macOS** (tested on MacBook Pro M4)
@@ -118,13 +163,29 @@ The system looks for:
 ## ⚡ Advanced Settings
 
 ### Change Check Interval
-Edit the `rdv_monitor.py` file and change the line:
+Edit the `config.py` file and modify the monitoring settings:
 ```python
-refresh_interval = 5  # seconds
+monitoring = {
+    "base_interval": 5,  # seconds
+    "url": "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/"
+}
 ```
 
-### Customize Availability Indicators
-Edit the `availability_indicators` list in the `check_for_availability()` method.
+### Customize Availability Detection
+Edit the `availability_handler.py` file to modify availability detection logic:
+```python
+# In src/monitor/handlers/availability_handler.py
+def check_availability(driver: WebDriver) -> Tuple[bool, str]:
+    # Customize your availability detection logic here
+```
+
+### Modify Delay Behavior
+Edit the `delay_utils.py` file to customize delay strategies:
+```python
+# In src/monitor/utils/delay_utils.py
+class DelayManager:
+    # Customize delay intervals and strategies
+```
 
 ## 🔍 Troubleshooting
 
@@ -168,6 +229,32 @@ If you encounter problems:
 2. Confirm Chrome is updated
 3. Test the URL manually in the browser
 4. Check if the URL hasn't changed on the official website
+
+## 🛠️ Development
+
+### **Code Structure**
+The codebase follows modern Python practices with clear separation of concerns:
+
+- **Modular Design**: Each component has a single responsibility
+- **Type Hints**: Full type annotation for better IDE support
+- **Error Handling**: Comprehensive error handling and logging
+- **Configuration**: Centralized configuration management
+
+### **Adding New Features**
+1. **New Page Types**: Add to `page_detector.py` and create handler in `page_handlers.py`
+2. **New Delay Strategies**: Extend `DelayManager` in `delay_utils.py`
+3. **New Availability Logic**: Modify `AvailabilityHandler` in `availability_handler.py`
+
+### **Testing**
+Each component can be tested independently:
+```python
+# Test availability detection
+from src.monitor.handlers.availability_handler import AvailabilityHandler
+# Test captcha handling
+from src.monitor.handlers.captcha_handler import CaptchaHandler
+# Test page operations
+from src.monitor.utils.page_utils import PageUtils
+```
 
 ---
 

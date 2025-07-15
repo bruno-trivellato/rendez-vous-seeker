@@ -171,18 +171,44 @@ class NotificationUtils:
     """Utilities for notifications"""
     
     @staticmethod
-    def play_sound():
+    def play_sound(times: int = 1, sound_type: str = "default"):
         """Plays a notification sound"""
         try:
-            # Try different sound commands based on system
-            if os.name == 'posix':  # macOS/Linux
-                # Try afplay (macOS)
-                subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
-                             capture_output=True, timeout=5)
-            else:  # Windows
-                # Try PowerShell to play sound
-                subprocess.run(['powershell', '-c', '[console]::beep(800,500)'], 
-                             capture_output=True, timeout=5)
+            for i in range(times):
+                # Try different sound commands based on system
+                if os.name == 'posix':  # macOS/Linux
+                    if sound_type == "availability":
+                        # Use custom sound for availability
+                        sound_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "notification_sound.mp3")
+                        if os.path.exists(sound_file):
+                            subprocess.run(['afplay', sound_file], 
+                                         capture_output=True, timeout=10)
+                        else:
+                            # Fallback to default sound
+                            subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
+                                         capture_output=True, timeout=5)
+                    elif sound_type == "captcha":
+                        # Use custom sound for captcha
+                        sound_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "captcha_sound.mp3")
+                        if os.path.exists(sound_file):
+                            subprocess.run(['afplay', sound_file], 
+                                         capture_output=True, timeout=10)
+                        else:
+                            # Fallback to default sound
+                            subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
+                                         capture_output=True, timeout=5)
+                    else:
+                        # Default sound for other notifications
+                        subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
+                                     capture_output=True, timeout=5)
+                else:  # Windows
+                    # Try PowerShell to play sound
+                    subprocess.run(['powershell', '-c', '[console]::beep(800,500)'], 
+                                 capture_output=True, timeout=5)
+                
+                # Small delay between sounds if playing multiple times
+                if i < times - 1:  # Don't sleep after the last sound
+                    time.sleep(0.3)
         except Exception as e:
             logger.debug(f"⚠️  Could not play sound: {e}")
     

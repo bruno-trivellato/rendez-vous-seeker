@@ -42,13 +42,13 @@ class ChromeConfig:
 @dataclass
 class MonitoringConfig:
     """Monitoring configuration"""
-    url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/"
+    url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/"
     target_url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/"
-    base_interval: int = 45  # seconds (increased from 20)
-    min_random_delay: int = 10  # seconds (increased from 5)
-    max_random_delay: int = 20  # seconds (increased from 10)
+    base_interval: int = 10  # seconds (reduced for testing)
+    min_random_delay: int = 5  # seconds (reduced for testing)
+    max_random_delay: int = 10  # seconds (reduced for testing)
     max_retries: int = 3
-    timeout: int = 30
+    timeout: int = 5  # Reduced from 30 to 10 seconds
 
 
 @dataclass
@@ -105,7 +105,7 @@ class AntiDetectionConfig:
 @dataclass
 class LoggingConfig:
     """Logging configuration"""
-    level: LogLevel = LogLevel.DEBUG  # Changed to DEBUG for more detailed logs
+    level: LogLevel = LogLevel.INFO  # Changed to INFO to reduce verbosity
     show_timestamps: bool = True
     show_check_count: bool = True
     log_to_file: bool = True  # Enable file logging

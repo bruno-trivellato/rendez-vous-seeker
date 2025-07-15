@@ -117,43 +117,64 @@ class PageDetector:
             Tuple[PageType, str]: Page type and description
         """
         try:
-            # Get page HTML
+            # Get page HTML and title
             page_source = driver.page_source.lower()
-            page_title = driver.title.lower()
+            page_title = driver.title
             
+            # FIRST: Check by title (more reliable)
+            # Check if captcha page (página de "Constituez votre dossier")
+            if "constituez votre dossier" in page_title.lower():
+                logger.info(f"🔍 Page classified as CAPTCHA by title: '{page_title}'")
+                return PageType.CAPTCHA, "Page with captcha - manual intervention required"
+            
+            # Also check for captcha in page content as backup
+            if self._is_captcha(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as CAPTCHA by content indicators: '{page_title}'")
+                return PageType.CAPTCHA, "Page with captcha - manual intervention required"
+            
+            # Check if appointment page (página de "Choisissez votre créneau")
+            if "choisissez votre créneau" in page_title.lower():
+                logger.info(f"🔍 Page classified as APPOINTMENT by title: '{page_title}'")
+                return PageType.UNAVAILABLE, "Appointment page - monitoring for available slots"
+            
+            # Check if initial page (página inicial)
+            if "accueil" in page_title.lower():
+                logger.info(f"🔍 Page classified as INITIAL by title: '{page_title}'")
+                return PageType.INITIAL, "Initial page - click on 'Prendre un rendez-vous'"
+            
+            # THEN: Check by content (less reliable)
             # Check if blocked (Cloudflare)
-            if self._is_blocked(page_source, page_title):
+            if self._is_blocked(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as BLOCKED by content indicators")
                 return PageType.BLOCKED, "Page blocked by Cloudflare"
             
             # Check if in maintenance
-            if self._is_maintenance(page_source, page_title):
+            if self._is_maintenance(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as MAINTENANCE by content indicators")
                 return PageType.MAINTENANCE, "Page in maintenance"
             
             # Check if there's an error
-            if self._is_error(page_source, page_title):
+            if self._is_error(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as ERROR by content indicators")
                 return PageType.ERROR, "Error page"
             
             # Check if loading
-            if self._is_loading(page_source, page_title):
+            if self._is_loading(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as LOADING by content indicators")
                 return PageType.LOADING, "Page loading"
             
             # Check if login required
-            if self._is_login_required(page_source, page_title):
+            if self._is_login_required(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as LOGIN_REQUIRED by content indicators")
                 return PageType.LOGIN_REQUIRED, "Login required"
             
-            # Check if captcha page
-            if self._is_captcha(page_source, page_title):
-                return PageType.CAPTCHA, "Page with captcha - manual intervention required"
-            
-            # Check if initial page
-            if self._is_initial(page_source, page_title):
-                return PageType.INITIAL, "Initial page - click on 'Prendre un rendez-vous'"
-            
             # Check if slots available
-            if self._is_available(page_source, page_title):
+            if self._is_available(page_source, page_title.lower()):
+                logger.info(f"🔍 Page classified as AVAILABLE by content indicators")
                 return PageType.AVAILABLE, "Available slots detected"
             
             # If we got here, probably normal page without availability
+            logger.info(f"🔍 Page classified as UNAVAILABLE (default) - title: '{page_title}'")
             return PageType.UNAVAILABLE, "Normal page - no available slots"
             
         except Exception as e:
@@ -164,6 +185,7 @@ class PageDetector:
         """Checks if the page is blocked by Cloudflare"""
         for indicator in self.blocked_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found BLOCKED indicator: '{indicator}'")
                 return True
         return False
     
@@ -171,6 +193,7 @@ class PageDetector:
         """Checks if the page is in maintenance"""
         for indicator in self.maintenance_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found MAINTENANCE indicator: '{indicator}'")
                 return True
         return False
     
@@ -178,6 +201,7 @@ class PageDetector:
         """Checks if it's an error page"""
         for indicator in self.error_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found ERROR indicator: '{indicator}'")
                 return True
         return False
     
@@ -185,6 +209,7 @@ class PageDetector:
         """Checks if the page is loading"""
         for indicator in self.loading_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found LOADING indicator: '{indicator}'")
                 return True
         return False
     
@@ -192,6 +217,7 @@ class PageDetector:
         """Checks if login is required"""
         for indicator in self.login_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found LOGIN_REQUIRED indicator: '{indicator}'")
                 return True
         return False
     
@@ -199,6 +225,7 @@ class PageDetector:
         """Checks if it's a captcha page"""
         for indicator in self.captcha_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found CAPTCHA indicator: '{indicator}'")
                 return True
         return False
     
@@ -206,6 +233,7 @@ class PageDetector:
         """Checks if it's an initial page"""
         for indicator in self.initial_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found INITIAL indicator: '{indicator}'")
                 return True
         return False
     
@@ -213,6 +241,7 @@ class PageDetector:
         """Checks if slots are available"""
         for indicator in self.availability_indicators:
             if indicator in page_source or indicator in page_title:
+                logger.info(f"🔍 Found AVAILABLE indicator: '{indicator}'")
                 return True
         return False
     

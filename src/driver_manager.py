@@ -5,11 +5,14 @@ import platform
 import os
 import subprocess
 import time
-from typing import Optional
+import json
+import pickle
+from typing import Optional, List, Callable
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from .config import config
 from .utils import logger, anti_detection
@@ -20,6 +23,7 @@ class DriverManager:
     
     def __init__(self):
         self.driver: Optional[uc.Chrome] = None
+        self.cookies_file = "saved_cookies.pkl"
     
     def setup_driver(self) -> uc.Chrome:
         """Configures and returns a ChromeDriver instance (now undetected-chromedriver)"""
@@ -31,13 +35,13 @@ class DriverManager:
             self.driver = uc.Chrome(options=chrome_options, headless=False)
             
             # Configure timeouts
-            logger.debug(f"⏱️  Setting page load timeout: {config.monitoring.timeout}s")
+            logger.info(f"⏱️  Setting page load timeout: {config.monitoring.timeout} seconds")
             self.driver.set_page_load_timeout(config.monitoring.timeout)
-            logger.debug("⏱️  Setting implicit wait: 10s")
-            self.driver.implicitly_wait(10)
+            logger.info("⏱️  Setting implicit wait: 2 seconds")
+            self.driver.implicitly_wait(2)
             
-            # Enable cookies and verify they work
-            self._ensure_cookies_enabled()
+            # Load saved cookies if available
+            self._load_cookies()
             
             logger.info("✅ undetected ChromeDriver started successfully")
             logger.debug(f"🔧 Driver capabilities: {self.driver.capabilities}")
@@ -72,12 +76,6 @@ class DriverManager:
         logger.debug(f"🔧 Using user agent: {user_agent[:50]}...")
         options.add_argument(f"--user-agent={user_agent}")
         
-        # Disable images to load faster
-        if config.chrome.disable_images:
-            logger.debug("🔧 Disabling images for faster loading...")
-            prefs = {"profile.managed_default_content_settings.images": 2}
-            options.add_experimental_option("prefs", prefs)
-        
         # Anti-detection configurations
         logger.debug("🔧 Adding anti-detection configurations...")
         options.add_argument("--disable-blink-features=AutomationControlled")
@@ -92,6 +90,23 @@ class DriverManager:
         logger.debug("🔧 Adding network configurations...")
         options.add_argument("--disable-web-security")
         options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-notifications")
+        
+        # Enable all content types including images and JavaScript
+        logger.debug("🔧 Enabling all content types...")
+        prefs = {
+            "profile.managed_default_content_settings.images": 1,  # Enable images
+            "profile.default_content_setting_values.notifications": 2,  # Disable notifications
+            "profile.managed_default_content_settings.stylesheets": 1,  # Enable CSS
+            "profile.managed_default_content_settings.cookies": 1,  # Enable cookies
+            "profile.managed_default_content_settings.javascript": 1,  # Enable JavaScript
+            "profile.managed_default_content_settings.plugins": 1,  # Enable plugins
+            "profile.managed_default_content_settings.popups": 2,  # Disable popups
+            "profile.managed_default_content_settings.geolocation": 2,  # Disable geolocation
+            "profile.managed_default_content_settings.media_stream": 2,  # Disable media stream
+        }
+        options.add_experimental_option("prefs", prefs)
         
         # Additional human-like behaviors
         logger.debug("🔧 Adding human-like behaviors...")
@@ -109,6 +124,196 @@ class DriverManager:
             logger.debug(f"🔧   {i+1:2d}. {arg}")
         
         return options
+
+    def load_page_async(self, url: str, check_conditions: List[Callable], max_wait: int = 10, check_interval: float = 0.5) -> bool:
+        """
+        Loads a page asynchronously and checks if specific conditions are met.
+        
+        Args:
+            url: The URL to load
+            check_conditions: List of functions that return True when the condition is met
+            max_wait: Maximum time to wait in seconds
+            check_interval: How often to check conditions in seconds
+            
+        Returns:
+            True if any condition was met, False if timeout
+        """
+        if not self.driver:
+            logger.error("❌ Driver not available for async page load")
+            return False
+            
+        try:
+            logger.info(f"🌐 Loading page asynchronously: {url}")
+            logger.info(f"⏱️  Max wait time: {max_wait}s, check interval: {check_interval}s")
+            
+            # Start loading the page (non-blocking)
+            self.driver.get(url)
+            logger.info("🚀 Page load started")
+            
+            # Wait and check conditions
+            start_time = time.time()
+            while time.time() - start_time < max_wait:
+                try:
+                    # Check each condition
+                    for i, condition in enumerate(check_conditions):
+                        try:
+                            if condition():
+                                logger.info(f"✅ Condition {i+1} met after {time.time() - start_time:.2f}s")
+                                return True
+                        except Exception as e:
+                            logger.debug(f"⚠️  Condition {i+1} check failed: {e}")
+                    
+                    # Wait before next check
+                    time.sleep(check_interval)
+                    
+                except Exception as e:
+                    logger.debug(f"⚠️  Error during condition check: {e}")
+                    time.sleep(check_interval)
+            
+            logger.warning(f"⏰ Timeout after {max_wait}s - no conditions met")
+            return False
+            
+        except Exception as e:
+            logger.error(f"❌ Error in async page load: {e}")
+            return False
+
+    def wait_for_conditions_async(self, check_conditions: List[Callable], max_wait: int = 10, check_interval: float = 0.5) -> bool:
+        """
+        Waits for specific conditions to be met on the current page.
+        
+        Args:
+            check_conditions: List of functions that return True when the condition is met
+            max_wait: Maximum time to wait in seconds
+            check_interval: How often to check conditions in seconds
+            
+        Returns:
+            True if any condition was met, False if timeout
+        """
+        if not self.driver:
+            logger.error("❌ Driver not available for condition check")
+            return False
+            
+        try:
+            logger.info(f"⏱️  Waiting for conditions (max: {max_wait}s, interval: {check_interval}s)")
+            
+            # Wait and check conditions
+            start_time = time.time()
+            while time.time() - start_time < max_wait:
+                try:
+                    # Check each condition
+                    for i, condition in enumerate(check_conditions):
+                        try:
+                            if condition():
+                                logger.info(f"✅ Condition {i+1} met after {time.time() - start_time:.2f}s")
+                                return True
+                        except Exception as e:
+                            logger.debug(f"⚠️  Condition {i+1} check failed: {e}")
+                    
+                    # Wait before next check
+                    time.sleep(check_interval)
+                    
+                except Exception as e:
+                    logger.debug(f"⚠️  Error during condition check: {e}")
+                    time.sleep(check_interval)
+            
+            logger.warning(f"⏰ Timeout after {max_wait}s - no conditions met")
+            return False
+            
+        except Exception as e:
+            logger.error(f"❌ Error in condition check: {e}")
+            return False
+
+    def wait_for_element_async(self, by: By, value: str, max_wait: int = 10, check_interval: float = 0.5) -> bool:
+        """
+        Waits for a specific element to appear in the DOM asynchronously.
+        
+        Args:
+            by: Selenium By strategy
+            value: Element selector
+            max_wait: Maximum time to wait in seconds
+            check_interval: How often to check in seconds
+            
+        Returns:
+            True if element found, False if timeout
+        """
+        if not self.driver:
+            return False
+            
+        def check_element():
+            try:
+                if self.driver:
+                    elements = self.driver.find_elements(str(by), value)
+                    return len(elements) > 0
+                return False
+            except:
+                return False
+        
+        # Create a simple condition check without loading a new page
+        start_time = time.time()
+        while time.time() - start_time < max_wait:
+            try:
+                if check_element():
+                    logger.info(f"✅ Element found after {time.time() - start_time:.2f}s")
+                    return True
+                time.sleep(check_interval)
+            except Exception as e:
+                logger.debug(f"⚠️  Error checking element: {e}")
+                time.sleep(check_interval)
+        
+        logger.warning(f"⏰ Timeout after {max_wait}s - element not found")
+        return False
+
+    def wait_for_captcha_image(self, max_wait: int = 10) -> bool:
+        """
+        Waits for captcha image to appear in the DOM.
+        
+        Args:
+            max_wait: Maximum time to wait in seconds
+            
+        Returns:
+            True if captcha image found, False if timeout
+        """
+        logger.info("🔍 Waiting for captcha image to appear...")
+        
+        def check_captcha():
+            try:
+                # Look for common captcha image selectors
+                captcha_selectors = [
+                    "img[src*='captcha']",
+                    "img[alt*='captcha']",
+                    "img[class*='captcha']",
+                    "img[id*='captcha']",
+                    ".captcha img",
+                    "#captcha img",
+                    "img[src*='recaptcha']",
+                    "img[src*='security']"
+                ]
+                
+                for selector in captcha_selectors:
+                    if self.driver:
+                        elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        if elements:
+                            logger.info(f"✅ Captcha image found with selector: {selector}")
+                            return True
+                
+                return False
+            except Exception as e:
+                logger.debug(f"⚠️  Error checking for captcha: {e}")
+                return False
+        
+        # Create a simple condition check without loading a new page
+        start_time = time.time()
+        while time.time() - start_time < max_wait:
+            try:
+                if check_captcha():
+                    return True
+                time.sleep(0.5)
+            except Exception as e:
+                logger.debug(f"⚠️  Error checking for captcha: {e}")
+                time.sleep(0.5)
+        
+        logger.warning(f"⏰ Timeout after {max_wait}s - captcha image not found")
+        return False
     
     def rotate_session(self):
         """Rotates the driver session (closes and reopens)"""
@@ -116,6 +321,7 @@ class DriverManager:
             try:
                 logger.info("🔄 Rotating ChromeDriver session...")
                 self.driver.quit()
+                logger.info("⏳ Waiting 2 seconds for driver closure...")
                 time.sleep(2)  # Wait for closure
                 
                 # Reset anti-detection counters
@@ -132,10 +338,54 @@ class DriverManager:
         """Closes the driver"""
         if self.driver:
             try:
+                # Save cookies before closing
+                self._save_cookies()
                 self.driver.quit()
                 logger.info("🛑 ChromeDriver closed")
             except Exception as e:
                 logger.error(f"❌ Error closing ChromeDriver: {e}")
+    
+    def _save_cookies(self):
+        """Saves cookies to file for reuse"""
+        try:
+            if not self.driver:
+                return
+                
+            cookies = self.driver.get_cookies()
+            if cookies:
+                with open(self.cookies_file, 'wb') as f:
+                    pickle.dump(cookies, f)
+                logger.info(f"🍪 Saved {len(cookies)} cookies to {self.cookies_file}")
+            else:
+                logger.info("🍪 No cookies to save")
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Could not save cookies: {e}")
+    
+    def _load_cookies(self):
+        """Loads cookies from file if available"""
+        try:
+            if not os.path.exists(self.cookies_file):
+                logger.info("🍪 No saved cookies found")
+                return
+                
+            with open(self.cookies_file, 'rb') as f:
+                cookies = pickle.load(f)
+            
+            if cookies and self.driver:
+                # Load cookies into the driver
+                for cookie in cookies:
+                    try:
+                        self.driver.add_cookie(cookie)
+                    except Exception as e:
+                        logger.debug(f"⚠️  Could not load cookie {cookie.get('name', 'unknown')}: {e}")
+                
+                logger.info(f"🍪 Loaded {len(cookies)} cookies from {self.cookies_file}")
+            else:
+                logger.info("🍪 No valid cookies found in file")
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Could not load cookies: {e}")
     
     def get_driver(self) -> Optional[uc.Chrome]:
         """Returns the current driver instance"""
@@ -284,21 +534,24 @@ class DriverManager:
                 logger.warning("⚠️  Driver not available for cookie verification")
                 return
                 
-            logger.debug("🍪 Verifying cookies are enabled...")
+            logger.info("🍪 Verifying cookies are enabled...")
             
             # Test cookies by setting a test cookie
+            logger.info("🍪 Loading test page for cookie verification...")
             self.driver.get("data:text/html,<html><body>Cookie Test</body></html>")
+            logger.info("🍪 Setting test cookie...")
             self.driver.add_cookie({
                 'name': 'test_cookie',
                 'value': 'enabled'
             })
             
             # Verify cookie was set
+            logger.info("🍪 Verifying test cookie was set...")
             cookies = self.driver.get_cookies()
             test_cookie = next((c for c in cookies if c['name'] == 'test_cookie'), None)
             
             if test_cookie:
-                logger.debug("✅ Cookies are working properly")
+                logger.info("✅ Cookies are working properly")
             else:
                 logger.warning("⚠️  Cookies may not be working properly")
                 
