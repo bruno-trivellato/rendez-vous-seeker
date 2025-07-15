@@ -1,5 +1,5 @@
 """
-Monitor principal do sistema de Rendez-vous
+Main monitor for the Rendez-vous system
 """
 import time
 import signal
@@ -18,7 +18,7 @@ from .page_detector import page_detector, PageType
 
 
 class RDVMonitor:
-    """Monitor principal para detectar disponibilidade de horários"""
+    """Main monitor to detect appointment availability"""
     
     def __init__(self):
         self.driver_manager = DriverManager()
@@ -27,270 +27,270 @@ class RDVMonitor:
         self.check_count = 0
         self.start_time = time.time()
         
-        # Configurar signal handler para parar graciosamente
+        # Configure signal handler to stop gracefully
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
     
     def _signal_handler(self, signum, frame):
-        """Handler para Ctrl+C e SIGTERM"""
-        logger.info("\n🛑 Parando o monitor...")
+        """Handler for Ctrl+C and SIGTERM"""
+        logger.info("\n🛑 Stopping the monitor...")
         self.running = False
         self.driver_manager.quit()
         sys.exit(0)
     
     def start(self):
-        """Inicia o monitoramento"""
+        """Starts the monitoring"""
         try:
-            logger.info("🚀 Iniciando monitor de Rendez-vous...")
+            logger.info("🚀 Starting Rendez-vous monitor...")
             logger.info(f"📍 URL: {config.monitoring.url}")
-            logger.info(f"⏱️  Intervalo base: {config.monitoring.base_interval} segundos")
-            logger.info(f"🎯 Anti-detecção: {'Ativado' if config.anti_detection.enable_random_delays else 'Desativado'}")
-            logger.info("🛑 Pressione Ctrl+C para parar\n")
+            logger.info(f"⏱️  Base interval: {config.monitoring.base_interval} seconds")
+            logger.info(f"🎯 Anti-detection: {'Enabled' if config.anti_detection.enable_random_delays else 'Disabled'}")
+            logger.info("🛑 Press Ctrl+C to stop\n")
             
-            # Inicializa o driver
+            # Initialize the driver
             self.driver_manager.setup_driver()
             driver = self.driver_manager.get_driver()
             
             if driver is None:
-                logger.error("❌ Falha ao inicializar o driver")
+                logger.error("❌ Failed to initialize driver")
                 return
             
-            # Carrega a página inicial
+            # Load the initial page
             driver.get(config.monitoring.url)
-            time.sleep(3)  # Aguarda carregamento inicial
+            time.sleep(3)  # Wait for initial loading
             
-            # Primeira verificação
+            # First check
             self.last_page_hash = self._get_page_hash(driver)
-            logger.info("✅ Página carregada inicialmente")
+            logger.info("✅ Page loaded initially")
             
-            # Loop principal de monitoramento
+            # Main monitoring loop
             self._monitoring_loop(driver)
             
         except Exception as e:
-            logger.error(f"❌ Erro fatal: {e}")
+            logger.error(f"❌ Fatal error: {e}")
         finally:
             self.driver_manager.quit()
     
     def _monitoring_loop(self, driver):
-        """Loop principal de monitoramento"""
+        """Main monitoring loop"""
         while self.running:
             try:
-                # Verifica se deve rotacionar a sessão
+                # Check if session should be rotated
                 if anti_detection.should_rotate_session():
-                    logger.info("🔄 Rotacionando sessão por segurança...")
+                    logger.info("🔄 Rotating session for security...")
                     self.driver_manager.rotate_session()
                     driver = self.driver_manager.get_driver()
                     if driver is None:
-                        logger.error("❌ Falha ao obter driver após rotação")
+                        logger.error("❌ Failed to get driver after rotation")
                         continue
                     driver.get(config.monitoring.url)
                 
-                # Refresh da página
+                # Page refresh
                 if driver is not None:
                     driver.refresh()
-                    time.sleep(2)  # Aguarda carregar
+                    time.sleep(2)  # Wait for loading
                 
-                # Detecta o tipo da página atual
+                # Detect current page type
                 if driver is not None:
                     page_info = page_detector.get_page_info(driver)
                     page_type = page_info["type"]
                     
-                    # Gera hash da nova página
+                    # Generate hash of new page
                     current_hash = self._get_page_hash(driver)
                     self.check_count += 1
                     
                     timestamp = time_utils.get_timestamp()
                     
-                    # Log baseado no tipo da página
+                    # Log based on page type
                     if page_type == PageType.BLOCKED:
-                        logger.warning(f"🚫 [{timestamp}] BLOQUEADO! {page_info['description']}")
-                        logger.warning(f"📋 Razão: {page_info.get('blocked_reason', 'Não especificada')}")
-                        logger.info("⏳ Aguardando antes da próxima tentativa...")
-                        time.sleep(30)  # Espera mais tempo se bloqueado
+                        logger.warning(f"🚫 [{timestamp}] BLOCKED! {page_info['description']}")
+                        logger.warning(f"📋 Reason: {page_info.get('blocked_reason', 'Not specified')}")
+                        logger.info("⏳ Waiting before next attempt...")
+                        time.sleep(30)  # Wait longer if blocked
                         continue
                         
                     elif page_type == PageType.MAINTENANCE:
-                        logger.warning(f"🔧 [{timestamp}] MANUTENÇÃO! {page_info['description']}")
-                        logger.info("⏳ Aguardando antes da próxima tentativa...")
-                        time.sleep(60)  # Espera mais tempo se em manutenção
+                        logger.warning(f"🔧 [{timestamp}] MAINTENANCE! {page_info['description']}")
+                        logger.info("⏳ Waiting before next attempt...")
+                        time.sleep(60)  # Wait longer if in maintenance
                         continue
                         
                     elif page_type == PageType.ERROR:
-                        logger.error(f"❌ [{timestamp}] ERRO! {page_info['description']}")
-                        logger.info("⏳ Aguardando antes da próxima tentativa...")
-                        time.sleep(45)  # Espera mais tempo se erro
+                        logger.error(f"❌ [{timestamp}] ERROR! {page_info['description']}")
+                        logger.info("⏳ Waiting before next attempt...")
+                        time.sleep(45)  # Wait longer if error
                         continue
                         
                     elif page_type == PageType.LOADING:
-                        logger.info(f"⏳ [{timestamp}] Carregando... {page_info['description']}")
-                        time.sleep(5)  # Espera um pouco mais se carregando
+                        logger.info(f"⏳ [{timestamp}] Loading... {page_info['description']}")
+                        time.sleep(5)  # Wait a bit more if loading
                         continue
                         
                     elif page_type == PageType.CAPTCHA:
-                        logger.warning(f"\n🔐 [{timestamp}] CAPTCHA DETECTADO! (Verificação #{self.check_count})")
+                        logger.warning(f"\n🔐 [{timestamp}] CAPTCHA DETECTED! (Check #{self.check_count})")
                         logger.warning(f"📝 {page_info['description']}")
                         
-                        # Notificação sonora e visual
+                        # Sound and visual notification
                         notification_utils.play_sound()
                         notification_utils.show_notification(
                             "RDV Monitor - CAPTCHA", 
-                            "Intervenção manual necessária! Digite o captcha."
+                            "Manual intervention required! Type the captcha."
                         )
                         
-                        logger.info("🔐 Digite o captcha manualmente e pressione Enter para continuar...")
-                        input("Pressione Enter quando terminar o captcha...")
+                        logger.info("🔐 Type the captcha manually and press Enter to continue...")
+                        input("Press Enter when you finish the captcha...")
                         continue
                         
                     elif page_type == PageType.INITIAL:
-                        logger.info(f"\n🏠 [{timestamp}] PÁGINA INICIAL DETECTADA! (Verificação #{self.check_count})")
+                        logger.info(f"\n🏠 [{timestamp}] INITIAL PAGE DETECTED! (Check #{self.check_count})")
                         logger.info(f"📝 {page_info['description']}")
                         
-                        # Tenta clicar no botão "Prendre un rendez-vous"
+                        # Try to click the "Prendre un rendez-vous" button
                         try:
                             from selenium.webdriver.common.by import By
                             buttons = driver.find_elements(By.TAG_NAME, "a")
                             for button in buttons:
                                 if "prendre un rendez-vous" in button.text.lower():
-                                    logger.info("🔘 Clicando em 'Prendre un rendez-vous'...")
+                                    logger.info("🔘 Clicking on 'Prendre un rendez-vous'...")
                                     button.click()
-                                    time.sleep(3)  # Aguarda carregar
+                                    time.sleep(3)  # Wait for loading
                                     break
                             else:
-                                logger.warning("⚠️  Botão 'Prendre un rendez-vous' não encontrado")
+                                logger.warning("⚠️  'Prendre un rendez-vous' button not found")
                         except Exception as e:
-                            logger.error(f"❌ Erro ao clicar no botão: {e}")
+                            logger.error(f"❌ Error clicking button: {e}")
                         
                         continue
                         
                     elif page_type == PageType.AVAILABLE:
-                        logger.info(f"\n🎉 [{timestamp}] HORÁRIOS DISPONÍVEIS! (Verificação #{self.check_count})")
-                        logger.info(f"📝 Detalhes: {page_info['description']}")
+                        logger.info(f"\n🎉 [{timestamp}] AVAILABLE SLOTS! (Check #{self.check_count})")
+                        logger.info(f"📝 Details: {page_info['description']}")
                         
-                        # Notificação sonora e visual
+                        # Sound and visual notification
                         notification_utils.play_sound()
                         notification_utils.show_notification(
-                            "RDV Monitor - HORÁRIOS DISPONÍVEIS!", 
-                            "Abra o navegador para agendar!"
+                            "RDV Monitor - AVAILABLE SLOTS!", 
+                            "Open the browser to schedule!"
                         )
                         
-                        # Mostra detalhes da disponibilidade
+                        # Show availability details
                         availability_details = page_info.get('availability_details', {})
                         if availability_details.get('buttons'):
-                            logger.info(f"🔘 Botões: {', '.join(availability_details['buttons'])}")
+                            logger.info(f"🔘 Buttons: {', '.join(availability_details['buttons'])}")
                         if availability_details.get('links'):
                             logger.info(f"🔗 Links: {', '.join(availability_details['links'])}")
                         
-                        logger.info("🔗 Abra o navegador manualmente para agendar!")
+                        logger.info("🔗 Open the browser manually to schedule!")
                         
-                        # Mantém a página aberta para o usuário
-                        input("\nPressione Enter para continuar monitorando ou Ctrl+C para parar...")
+                        # Keep the page open for the user
+                        input("\nPress Enter to continue monitoring or Ctrl+C to stop...")
                         
                     elif page_type == PageType.UNAVAILABLE:
                         if current_hash != self.last_page_hash:
-                            logger.info(f"\n🔄 [{timestamp}] MUDANÇA DETECTADA! (Verificação #{self.check_count})")
+                            logger.info(f"\n🔄 [{timestamp}] CHANGE DETECTED! (Check #{self.check_count})")
                             logger.info(f"ℹ️  {page_info['description']}")
                             self.last_page_hash = current_hash
                         else:
                             if config.logging.show_check_count:
-                                logger.info(f"[{timestamp}] Verificação #{self.check_count} - {page_info['description']}")
+                                logger.info(f"[{timestamp}] Check #{self.check_count} - {page_info['description']}")
                             else:
                                 logger.info(f"[{timestamp}] {page_info['description']}")
                                 
-                    else:  # UNKNOWN ou outros
-                        logger.warning(f"❓ [{timestamp}] Página desconhecida: {page_info['description']}")
-                        logger.info(f"📄 Título: {page_info['title']}")
+                    else:  # UNKNOWN or others
+                        logger.warning(f"❓ [{timestamp}] Unknown page: {page_info['description']}")
+                        logger.info(f"📄 Title: {page_info['title']}")
                         logger.info(f"🔗 URL: {page_info['url']}")
                 
-                # Delay antes da próxima verificação
+                # Delay before next check
                 self._smart_delay()
                 
             except Exception as e:
-                logger.error(f"❌ Erro durante monitoramento: {e}")
+                logger.error(f"❌ Error during monitoring: {e}")
                 self._smart_delay()
     
     def _get_page_hash(self, driver) -> Optional[str]:
-        """Gera um hash do conteúdo da página para detectar mudanças"""
+        """Generates a hash of the page content to detect changes"""
         try:
             if driver is None:
                 return None
                 
-            # Aguarda a página carregar
+            # Wait for the page to load
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
-            # Pega o HTML da página
+            # Get the HTML of the page
             page_source = driver.page_source
             
-            # Normaliza o conteúdo
+            # Normalize content
             normalized_content = hash_utils.normalize_content(page_source)
             
-            # Remove scripts e elementos dinâmicos
+            # Remove scripts and dynamic elements
             soup = BeautifulSoup(normalized_content, 'html.parser')
             
-            # Remove scripts e styles
+            # Remove scripts and styles
             for script in soup(["script", "style"]):
                 script.decompose()
             
-            # Remove atributos que mudam frequentemente
+            # Remove attributes that change frequently
             for tag in soup.find_all(True):
                 for attr in ['data-reactid', 'data-testid', 'id']:
                     if tag.has_attr(attr):
                         del tag[attr]
             
-            # Gera hash do conteúdo limpo
+            # Generate hash of clean content
             content = str(soup)
             return hashlib.md5(content.encode()).hexdigest()
             
         except Exception as e:
-            logger.error(f"❌ Erro ao gerar hash da página: {e}")
+            logger.error(f"❌ Error generating page hash: {e}")
             return None
     
     def _check_availability(self, driver) -> Tuple[bool, str]:
-        """Verifica se há horários disponíveis na página"""
+        """Checks if there are available slots on the page"""
         try:
             if driver is None:
-                return False, "Driver não disponível"
+                return False, "Driver not available"
                 
             page_text = driver.page_source.lower()
             
-            # Verifica se há botões de agendamento
+            # Check for appointment buttons
             buttons = driver.find_elements(By.TAG_NAME, "button")
             for button in buttons:
                 button_text = button.text.lower()
                 if config.detection.availability_indicators and any(indicator in button_text for indicator in config.detection.availability_indicators):
-                    return True, f"Botão encontrado: {button.text}"
+                    return True, f"Button found: {button.text}"
             
-            # Verifica se há links de agendamento
+            # Check for appointment links
             links = driver.find_elements(By.TAG_NAME, "a")
             for link in links:
                 link_text = link.text.lower()
                 if config.detection.availability_indicators and any(indicator in link_text for indicator in config.detection.availability_indicators):
-                    return True, f"Link encontrado: {link.text}"
+                    return True, f"Link found: {link.text}"
             
-            # Verifica se há mensagens de disponibilidade no texto
+            # Check for availability messages in text
             if config.detection.availability_indicators:
                 for indicator in config.detection.availability_indicators:
                     if indicator in page_text:
-                        return True, f"Indicador encontrado: {indicator}"
+                        return True, f"Indicator found: {indicator}"
             
-            return False, "Nenhum horário disponível detectado"
+            return False, "No available slots detected"
             
         except Exception as e:
-            logger.error(f"❌ Erro ao verificar disponibilidade: {e}")
-            return False, f"Erro: {e}"
+            logger.error(f"❌ Error checking availability: {e}")
+            return False, f"Error: {e}"
     
     def _smart_delay(self):
-        """Implementa delay inteligente com anti-detecção"""
+        """Implements intelligent delay with anti-detection"""
         if config.anti_detection.enable_random_delays:
             delay = anti_detection.get_random_delay()
-            logger.debug(f"⏳ Delay aleatório: {delay:.1f}s")
+            logger.debug(f"⏳ Random delay: {delay:.1f}s")
             time.sleep(delay)
         else:
             time.sleep(config.monitoring.base_interval)
     
     def get_stats(self) -> dict:
-        """Retorna estatísticas do monitoramento"""
+        """Returns monitoring statistics"""
         uptime = time.time() - self.start_time
         return {
             "check_count": self.check_count,

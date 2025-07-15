@@ -2,60 +2,60 @@
 
 set -e
 
-echo "🚀 Configurando Monitor de Rendez-vous..."
-echo "=========================================="
+echo "🚀 Setting up Rendez-vous Monitor..."
+echo "====================================="
 
-# Verifica se Python 3 está instalado
+# Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 não encontrado. Por favor, instale o Python 3 primeiro."
+    echo "❌ Python 3 not found. Please install Python 3 first."
     exit 1
 fi
 
-echo "✅ Python 3 encontrado: $(python3 --version)"
+echo "✅ Python 3 found: $(python3 --version)"
 
-# Cria ambiente virtual se não existir
+# Create virtual environment if it doesn't exist
 if [ ! -d ".venv" ]; then
-    echo "🛠️  Criando ambiente virtual Python (.venv)..."
+    echo "🛠️  Creating Python virtual environment (.venv)..."
     python3 -m venv .venv
 fi
 
-echo "✅ Ambiente virtual pronto"
+echo "✅ Virtual environment ready"
 
-# Ativa o ambiente virtual
+# Activate virtual environment
 source .venv/bin/activate
 
-echo "🐍 Ambiente virtual ativado"
+echo "🐍 Virtual environment activated"
 
-# Atualiza pip
+# Update pip
 pip install --upgrade pip
 
-# Instala as dependências
-echo "📦 Instalando dependências no ambiente virtual..."
+# Install dependencies
+echo "📦 Installing dependencies in virtual environment..."
 pip install -r requirements.txt
 
 if [ $? -eq 0 ]; then
-    echo "✅ Dependências instaladas com sucesso!"
+    echo "✅ Dependencies installed successfully!"
 else
-    echo "❌ Erro ao instalar dependências"
+    echo "❌ Error installing dependencies"
     deactivate
     exit 1
 fi
 
-# Torna os scripts executáveis
+# Make scripts executable
 chmod +x main.py
 
 echo ""
-echo "🎉 Configuração concluída!"
+echo "🎉 Setup completed!"
 echo ""
-echo "Para ativar o ambiente virtual depois:"
+echo "To activate the virtual environment later:"
 echo "  source .venv/bin/activate"
 echo ""
-echo "Para executar o monitor:"
+echo "To run the monitor:"
 echo "  python main.py"
 echo ""
-echo "Para parar o monitor:"
-echo "  Pressione Ctrl+C"
+echo "To stop the monitor:"
+echo "  Press Ctrl+C"
 echo ""
-echo "Para sair do ambiente virtual:"
+echo "To exit the virtual environment:"
 echo "  deactivate"
 echo "" 

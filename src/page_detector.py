@@ -1,6 +1,6 @@
 """
-Detector de páginas do sistema de Rendez-vous
-Identifica em qual estado/página estamos no sistema da prefeitura
+Page detector for the Rendez-vous system
+Identifies which state/page we are on in the city hall system
 """
 from enum import Enum
 from typing import Optional, Tuple
@@ -12,21 +12,21 @@ from .utils import logger
 
 
 class PageType(Enum):
-    """Tipos de páginas possíveis no sistema"""
+    """Possible page types in the system"""
     UNKNOWN = "unknown"
-    BLOCKED = "blocked"  # Página de bloqueio Cloudflare
-    MAINTENANCE = "maintenance"  # Página de manutenção
-    ERROR = "error"  # Página de erro genérica
-    LOADING = "loading"  # Página carregando
-    AVAILABLE = "available"  # Página com horários disponíveis
-    UNAVAILABLE = "unavailable"  # Página sem horários
-    LOGIN_REQUIRED = "login_required"  # Página pedindo login
-    CAPTCHA = "captcha"  # Página com captcha
-    INITIAL = "initial"  # Página inicial
+    BLOCKED = "blocked"  # Cloudflare blocking page
+    MAINTENANCE = "maintenance"  # Maintenance page
+    ERROR = "error"  # Generic error page
+    LOADING = "loading"  # Loading page
+    AVAILABLE = "available"  # Page with available slots
+    UNAVAILABLE = "unavailable"  # Page without slots
+    LOGIN_REQUIRED = "login_required"  # Page asking for login
+    CAPTCHA = "captcha"  # Page with captcha
+    INITIAL = "initial"  # Initial page
 
 
 class PageDetector:
-    """Detector de páginas do sistema"""
+    """Page detector for the system"""
     
     def __init__(self):
         self.blocked_indicators = [
@@ -111,106 +111,106 @@ class PageDetector:
     
     def detect_page_type(self, driver: WebDriver) -> Tuple[PageType, str]:
         """
-        Detecta o tipo da página atual
+        Detects the current page type
         
         Returns:
-            Tuple[PageType, str]: Tipo da página e descrição
+            Tuple[PageType, str]: Page type and description
         """
         try:
-            # Pega o HTML da página
+            # Get page HTML
             page_source = driver.page_source.lower()
             page_title = driver.title.lower()
             
-            # Verifica se está bloqueado (Cloudflare)
+            # Check if blocked (Cloudflare)
             if self._is_blocked(page_source, page_title):
-                return PageType.BLOCKED, "Página bloqueada pelo Cloudflare"
+                return PageType.BLOCKED, "Page blocked by Cloudflare"
             
-            # Verifica se está em manutenção
+            # Check if in maintenance
             if self._is_maintenance(page_source, page_title):
-                return PageType.MAINTENANCE, "Página em manutenção"
+                return PageType.MAINTENANCE, "Page in maintenance"
             
-            # Verifica se há erro
+            # Check if there's an error
             if self._is_error(page_source, page_title):
-                return PageType.ERROR, "Página de erro"
+                return PageType.ERROR, "Error page"
             
-            # Verifica se está carregando
+            # Check if loading
             if self._is_loading(page_source, page_title):
-                return PageType.LOADING, "Página carregando"
+                return PageType.LOADING, "Page loading"
             
-            # Verifica se precisa de login
+            # Check if login required
             if self._is_login_required(page_source, page_title):
-                return PageType.LOGIN_REQUIRED, "Login necessário"
+                return PageType.LOGIN_REQUIRED, "Login required"
             
-            # Verifica se é página de captcha
+            # Check if captcha page
             if self._is_captcha(page_source, page_title):
-                return PageType.CAPTCHA, "Página com captcha - intervenção manual necessária"
+                return PageType.CAPTCHA, "Page with captcha - manual intervention required"
             
-            # Verifica se é página inicial
+            # Check if initial page
             if self._is_initial(page_source, page_title):
-                return PageType.INITIAL, "Página inicial - clique em 'Prendre un rendez-vous'"
+                return PageType.INITIAL, "Initial page - click on 'Prendre un rendez-vous'"
             
-            # Verifica se há horários disponíveis
+            # Check if slots available
             if self._is_available(page_source, page_title):
-                return PageType.AVAILABLE, "Horários disponíveis detectados"
+                return PageType.AVAILABLE, "Available slots detected"
             
-            # Se chegou até aqui, provavelmente é a página normal sem disponibilidade
-            return PageType.UNAVAILABLE, "Página normal - sem horários disponíveis"
+            # If we got here, probably normal page without availability
+            return PageType.UNAVAILABLE, "Normal page - no available slots"
             
         except Exception as e:
-            logger.error(f"❌ Erro ao detectar tipo da página: {e}")
-            return PageType.UNKNOWN, f"Erro na detecção: {e}"
+            logger.error(f"❌ Error detecting page type: {e}")
+            return PageType.UNKNOWN, f"Detection error: {e}"
     
     def _is_blocked(self, page_source: str, page_title: str) -> bool:
-        """Verifica se a página está bloqueada pelo Cloudflare"""
+        """Checks if the page is blocked by Cloudflare"""
         for indicator in self.blocked_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_maintenance(self, page_source: str, page_title: str) -> bool:
-        """Verifica se a página está em manutenção"""
+        """Checks if the page is in maintenance"""
         for indicator in self.maintenance_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_error(self, page_source: str, page_title: str) -> bool:
-        """Verifica se é uma página de erro"""
+        """Checks if it's an error page"""
         for indicator in self.error_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_loading(self, page_source: str, page_title: str) -> bool:
-        """Verifica se a página está carregando"""
+        """Checks if the page is loading"""
         for indicator in self.loading_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_login_required(self, page_source: str, page_title: str) -> bool:
-        """Verifica se precisa de login"""
+        """Checks if login is required"""
         for indicator in self.login_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_captcha(self, page_source: str, page_title: str) -> bool:
-        """Verifica se é página de captcha"""
+        """Checks if it's a captcha page"""
         for indicator in self.captcha_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_initial(self, page_source: str, page_title: str) -> bool:
-        """Verifica se é página inicial"""
+        """Checks if it's an initial page"""
         for indicator in self.initial_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
         return False
     
     def _is_available(self, page_source: str, page_title: str) -> bool:
-        """Verifica se há horários disponíveis"""
+        """Checks if slots are available"""
         for indicator in self.availability_indicators:
             if indicator in page_source or indicator in page_title:
                 return True
@@ -218,10 +218,10 @@ class PageDetector:
     
     def get_page_info(self, driver: WebDriver) -> dict:
         """
-        Retorna informações detalhadas sobre a página atual
+        Returns detailed information about the current page
         
         Returns:
-            dict: Informações da página
+            dict: Page information
         """
         try:
             page_type, description = self.detect_page_type(driver)
@@ -234,7 +234,7 @@ class PageDetector:
                 "status_code": self._get_status_code(driver)
             }
             
-            # Adiciona informações específicas baseadas no tipo
+            # Adds specific information based on type
             if page_type == PageType.BLOCKED:
                 info["blocked_reason"] = self._get_blocked_reason(driver)
             elif page_type == PageType.AVAILABLE:
@@ -243,19 +243,19 @@ class PageDetector:
             return info
             
         except Exception as e:
-            logger.error(f"❌ Erro ao obter informações da página: {e}")
+            logger.error(f"❌ Error getting page information: {e}")
             return {
                 "type": PageType.UNKNOWN,
-                "description": f"Erro: {e}",
-                "title": "Erro",
-                "url": "Erro",
+                "description": f"Error: {e}",
+                "title": "Error",
+                "url": "Error",
                 "status_code": None
             }
     
     def _get_status_code(self, driver: WebDriver) -> Optional[int]:
-        """Tenta obter o código de status HTTP"""
+        """Attempts to get the HTTP status code"""
         try:
-            # Selenium não expõe diretamente o status code, mas podemos tentar detectar
+            # Selenium does not expose the status code directly, but we can try to detect
             page_source = driver.page_source.lower()
             
             if "404" in page_source:
@@ -265,30 +265,30 @@ class PageDetector:
             elif "503" in page_source:
                 return 503
             else:
-                return 200  # Assumimos 200 se não detectamos erro
+                return 200  # Assume 200 if no error is detected
                 
         except Exception:
             return None
     
     def _get_blocked_reason(self, driver: WebDriver) -> str:
-        """Extrai a razão do bloqueio"""
+        """Extracts the blocking reason"""
         try:
             page_source = driver.page_source
             soup = BeautifulSoup(page_source, 'html.parser')
             
-            # Procura por elementos que indicam a razão do bloqueio
+            # Searches for elements that indicate the blocking reason
             blocked_indicators = ["security solution", "triggered", "blocked", "protection"]
             for text in soup.stripped_strings:
                 if any(indicator in text.lower() for indicator in blocked_indicators):
                     return text.strip()
             else:
-                return "Razão não especificada"
+                return "Reason unspecified"
                 
         except Exception as e:
-            return f"Erro ao extrair razão: {e}"
+            return f"Error extracting reason: {e}"
     
     def _get_availability_details(self, driver: WebDriver) -> dict:
-        """Extrai detalhes sobre a disponibilidade"""
+        """Extracts details about availability"""
         try:
             details = {
                 "buttons": [],
@@ -296,21 +296,21 @@ class PageDetector:
                 "text_indicators": []
             }
             
-            # Procura por botões de agendamento
+            # Searches for appointment buttons
             buttons = driver.find_elements(By.TAG_NAME, "button")
             for button in buttons:
                 button_text = button.text.lower()
                 if any(indicator in button_text for indicator in self.availability_indicators):
                     details["buttons"].append(button.text)
             
-            # Procura por links de agendamento
+            # Searches for appointment links
             links = driver.find_elements(By.TAG_NAME, "a")
             for link in links:
                 link_text = link.text.lower()
                 if any(indicator in link_text for indicator in self.availability_indicators):
                     details["links"].append(link.text)
             
-            # Procura por indicadores no texto
+            # Searches for indicators in the text
             page_text = driver.page_source.lower()
             for indicator in self.availability_indicators:
                 if indicator in page_text:
@@ -319,8 +319,8 @@ class PageDetector:
             return details
             
         except Exception as e:
-            return {"error": f"Erro ao extrair detalhes: {e}"}
+            return {"error": f"Error extracting details: {e}"}
 
 
-# Instância global
+# Global instance
 page_detector = PageDetector() 

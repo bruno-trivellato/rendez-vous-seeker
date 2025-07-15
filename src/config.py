@@ -1,5 +1,5 @@
 """
-Configurações centralizadas do Monitor de Rendez-vous
+Centralized configuration for the Rendez-vous Monitor
 """
 import os
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from enum import Enum
 
 
 class LogLevel(Enum):
-    """Níveis de log disponíveis"""
+    """Available log levels"""
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -17,7 +17,7 @@ class LogLevel(Enum):
 
 @dataclass
 class ChromeConfig:
-    """Configurações do Chrome"""
+    """Chrome configuration"""
     window_size: str = "1920,1080"
     disable_images: bool = True
     user_agents: Optional[List[str]] = None
@@ -35,21 +35,21 @@ class ChromeConfig:
 
 @dataclass
 class MonitoringConfig:
-    """Configurações de monitoramento"""
+    """Monitoring configuration"""
     url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/"
     target_url: str = "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/"
-    base_interval: int = 20  # segundos
-    min_random_delay: int = 5  # segundos
-    max_random_delay: int = 10  # segundos
+    base_interval: int = 20  # seconds
+    min_random_delay: int = 5  # seconds
+    max_random_delay: int = 10  # seconds
     max_retries: int = 3
     timeout: int = 30
 
 
 @dataclass
 class DetectionConfig:
-    """Configurações de detecção"""
+    """Detection configuration"""
     availability_indicators: Optional[List[str]] = None
-    change_threshold: float = 0.1  # % de mudança mínima para considerar relevante
+    change_threshold: float = 0.1  # minimum change percentage to consider relevant
     
     def __post_init__(self):
         if self.availability_indicators is None:
@@ -63,15 +63,15 @@ class DetectionConfig:
 
 @dataclass
 class AntiDetectionConfig:
-    """Configurações anti-detecção"""
+    """Anti-detection configuration"""
     enable_random_delays: bool = True
     enable_user_agent_rotation: bool = True
     enable_headers_rotation: bool = True
     enable_session_rotation: bool = True
-    session_rotation_interval: int = 50  # rotação a cada N requisições
+    session_rotation_interval: int = 50  # rotation every N requests
     max_requests_per_session: int = 100
     
-    # Headers extras para parecer mais humano
+    # Extra headers to appear more human-like
     additional_headers: Optional[Dict[str, str]] = None
     
     def __post_init__(self):
@@ -92,7 +92,7 @@ class AntiDetectionConfig:
 
 @dataclass
 class LoggingConfig:
-    """Configurações de logging"""
+    """Logging configuration"""
     level: LogLevel = LogLevel.INFO
     show_timestamps: bool = True
     show_check_count: bool = True
@@ -101,7 +101,7 @@ class LoggingConfig:
 
 
 class Config:
-    """Configuração principal do sistema"""
+    """Main system configuration"""
     
     def __init__(self):
         self.chrome = ChromeConfig()
@@ -112,10 +112,10 @@ class Config:
     
     @classmethod
     def from_env(cls) -> 'Config':
-        """Cria configuração a partir de variáveis de ambiente"""
+        """Create configuration from environment variables"""
         config = cls()
         
-        # Permite sobrescrever configurações via env vars
+        # Allow overriding configurations via env vars
         rdv_url = os.getenv("RDV_URL")
         if rdv_url is not None:
             config.monitoring.url = rdv_url
@@ -131,5 +131,5 @@ class Config:
         return config
 
 
-# Instância global de configuração
+# Global configuration instance
 config = Config.from_env() 

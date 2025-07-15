@@ -2,22 +2,22 @@
 
 set -e
 
-echo "🎯 Iniciando Monitor de Rendez-vous..."
-echo "======================================"
+echo "🎯 Starting Rendez-vous Monitor..."
+echo "=================================="
 
-# Se não existir o ambiente virtual, roda o setup
+# If virtual environment doesn't exist, run setup
 if [ ! -d ".venv" ]; then
-    echo "🛠️  Ambiente virtual não encontrado. Executando setup.sh..."
+    echo "🛠️  Virtual environment not found. Running setup.sh..."
     ./setup.sh
 fi
 
-# Ativa o ambiente virtual
+# Activate virtual environment
 source .venv/bin/activate
 
-echo "🐍 Ambiente virtual ativado"
+echo "🐍 Virtual environment activated"
 
-echo "🚀 Iniciando monitor..."
+echo "🚀 Starting monitor..."
 python main.py
 
-# Ao sair do monitor, desativa o ambiente virtual
+# When exiting the monitor, deactivate virtual environment
 deactivate 

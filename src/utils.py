@@ -1,5 +1,5 @@
 """
-Utilitários para o Monitor de Rendez-vous
+Utilities for the Rendez-vous Monitor
 """
 import time
 import random
@@ -12,27 +12,27 @@ from .config import config
 
 
 class Logger:
-    """Logger customizado para o monitor"""
+    """Custom logger for the monitor"""
     
     def __init__(self, name: str = "RDVMonitor"):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(config.logging.level.value)
         
-        # Handler para console
+        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(config.logging.level.value)
         
-        # Formato do log
+        # Log format
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         console_handler.setFormatter(formatter)
         
-        # Adiciona handler se não existir
+        # Add handler if it doesn't exist
         if not self.logger.handlers:
             self.logger.addHandler(console_handler)
         
-        # Handler para arquivo (se configurado)
+        # File handler (if configured)
         if config.logging.log_to_file:
             file_handler = logging.FileHandler(config.logging.log_file)
             file_handler.setLevel(config.logging.level.value)
@@ -40,24 +40,24 @@ class Logger:
             self.logger.addHandler(file_handler)
     
     def info(self, message: str):
-        """Log de informação"""
+        """Information log"""
         self.logger.info(message)
     
     def warning(self, message: str):
-        """Log de aviso"""
+        """Warning log"""
         self.logger.warning(message)
     
     def error(self, message: str):
-        """Log de erro"""
+        """Error log"""
         self.logger.error(message)
     
     def debug(self, message: str):
-        """Log de debug"""
+        """Debug log"""
         self.logger.debug(message)
 
 
 class AntiDetectionUtils:
-    """Utilitários para evitar detecção de bot"""
+    """Utilities to avoid bot detection"""
     
     def __init__(self):
         self.current_user_agent_index = 0
@@ -65,7 +65,7 @@ class AntiDetectionUtils:
         self.session_start_time = time.time()
     
     def get_random_delay(self) -> float:
-        """Retorna um delay aleatório entre min e max"""
+        """Returns a random delay between min and max"""
         if not config.anti_detection.enable_random_delays:
             return 0
         
@@ -75,7 +75,7 @@ class AntiDetectionUtils:
         )
     
     def get_next_user_agent(self) -> str:
-        """Retorna o próximo user agent da lista (rotação)"""
+        """Returns the next user agent from the list (rotation)"""
         if not config.anti_detection.enable_user_agent_rotation:
             return config.chrome.user_agents[0] if config.chrome.user_agents else ""
         
@@ -86,33 +86,33 @@ class AntiDetectionUtils:
         return ""
     
     def should_rotate_session(self) -> bool:
-        """Verifica se deve rotacionar a sessão"""
+        """Checks if session should be rotated"""
         if not config.anti_detection.enable_session_rotation:
             return False
         
         self.request_count += 1
         return (
             self.request_count % config.anti_detection.session_rotation_interval == 0 or
-            time.time() - self.session_start_time > 3600  # 1 hora
+            time.time() - self.session_start_time > 3600  # 1 hour
         )
     
     def reset_session(self):
-        """Reseta contadores da sessão"""
+        """Resets session counters"""
         self.request_count = 0
         self.session_start_time = time.time()
 
 
 class TimeUtils:
-    """Utilitários relacionados a tempo"""
+    """Time-related utilities"""
     
     @staticmethod
     def get_timestamp() -> str:
-        """Retorna timestamp formatado"""
+        """Returns formatted timestamp"""
         return datetime.now().strftime("%H:%M:%S")
     
     @staticmethod
     def format_duration(seconds: float) -> str:
-        """Formata duração em segundos para string legível"""
+        """Formats duration in seconds to readable string"""
         if seconds < 60:
             return f"{seconds:.1f}s"
         elif seconds < 3600:
@@ -124,58 +124,58 @@ class TimeUtils:
 
 
 class HashUtils:
-    """Utilitários para hash e comparação de conteúdo"""
+    """Utilities for hash and content comparison"""
     
     @staticmethod
     def normalize_content(content: str) -> str:
-        """Normaliza conteúdo removendo elementos dinâmicos"""
+        """Normalizes content by removing dynamic elements"""
         import re
         
         # Remove timestamps
         content = re.sub(r'\d{1,2}:\d{2}:\d{2}', '', content)
         content = re.sub(r'\d{4}-\d{2}-\d{2}', '', content)
         
-        # Remove IDs dinâmicos
+        # Remove dynamic IDs
         content = re.sub(r'id="[^"]*"', '', content)
         content = re.sub(r'data-[^=]*="[^"]*"', '', content)
         
-        # Remove espaços extras
+        # Remove extra spaces
         content = re.sub(r'\s+', ' ', content)
         
         return content.strip()
     
     @staticmethod
     def calculate_similarity(hash1: str, hash2: str) -> float:
-        """Calcula similaridade entre dois hashes"""
+        """Calculates similarity between two hashes"""
         if hash1 == hash2:
             return 1.0
         
-        # Implementação simples - pode ser melhorada
+        # Simple implementation - can be improved
         return 0.0
 
 
 class NotificationUtils:
-    """Utilitários para notificações"""
+    """Utilities for notifications"""
     
     @staticmethod
     def play_sound():
-        """Toca um som de notificação"""
+        """Plays a notification sound"""
         try:
-            # Tenta diferentes comandos de som baseado no sistema
+            # Try different sound commands based on system
             if os.name == 'posix':  # macOS/Linux
-                # Tenta afplay (macOS)
+                # Try afplay (macOS)
                 subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
                              capture_output=True, timeout=5)
             else:  # Windows
-                # Tenta PowerShell para tocar som
+                # Try PowerShell to play sound
                 subprocess.run(['powershell', '-c', '[console]::beep(800,500)'], 
                              capture_output=True, timeout=5)
         except Exception as e:
-            logger.debug(f"⚠️  Não foi possível tocar som: {e}")
+            logger.debug(f"⚠️  Could not play sound: {e}")
     
     @staticmethod
     def show_notification(title: str, message: str):
-        """Mostra notificação do sistema"""
+        """Shows system notification"""
         try:
             if os.name == 'posix':  # macOS/Linux
                 subprocess.run(['osascript', '-e', 
@@ -186,10 +186,10 @@ class NotificationUtils:
                               f'[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null; $template = \'<toast><visual><binding template="ToastText01"><text id="1">{message}</text></binding></visual></toast>\'; $xml = New-Object Windows.Data.Xml.Dom.XmlDocument; $xml.LoadXml($template); $toast = New-Object Windows.UI.Notifications.ToastNotification $xml; [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("{title}").Show($toast);'], 
                              capture_output=True, timeout=10)
         except Exception as e:
-            logger.debug(f"⚠️  Não foi possível mostrar notificação: {e}")
+            logger.debug(f"⚠️  Could not show notification: {e}")
 
 
-# Instâncias globais
+# Global instances
 logger = Logger()
 anti_detection = AntiDetectionUtils()
 time_utils = TimeUtils()

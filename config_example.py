@@ -1,48 +1,48 @@
 """
-Exemplo de configuração personalizada para o Monitor de Rendez-vous
-Copie este arquivo para config.py e ajuste conforme suas necessidades
+Example of custom configuration for the Rendez-vous Monitor
+Copy this file to config.py and adjust according to your needs
 """
 
-# Configurações de monitoramento
+# Monitoring configurations
 MONITORING_CONFIG = {
     "url": "https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/",
-    "base_interval": 15,  # segundos (mais discreto)
-    "min_random_delay": 5,  # segundos
-    "max_random_delay": 12,  # segundos
+    "base_interval": 15,  # seconds (more discrete)
+    "min_random_delay": 5,  # seconds
+    "max_random_delay": 12,  # seconds
     "max_retries": 3,
     "timeout": 30
 }
 
-# Configurações anti-detecção
+# Anti-detection configurations
 ANTI_DETECTION_CONFIG = {
     "enable_random_delays": True,
     "enable_user_agent_rotation": True,
     "enable_headers_rotation": True,
     "enable_session_rotation": True,
-    "session_rotation_interval": 30,  # rotação mais frequente
+    "session_rotation_interval": 30,  # more frequent rotation
     "max_requests_per_session": 50
 }
 
-# Indicadores de disponibilidade personalizados
+# Custom availability indicators
 AVAILABILITY_INDICATORS = [
     "disponible", "available", "libre", "free",
     "réserver", "reserve", "choisir", "select",
     "creneau", "slot", "rendez-vous", "appointment",
     "horaire", "schedule", "placer", "place",
-    # Adicione mais palavras-chave específicas do site
+    # Add more site-specific keywords
     "prendre rendez-vous", "book appointment"
 ]
 
-# Configurações de logging
+# Logging configurations
 LOGGING_CONFIG = {
     "level": "INFO",  # DEBUG, INFO, WARNING, ERROR
     "show_timestamps": True,
-    "show_check_count": False,  # Menos verbose
+    "show_check_count": False,  # Less verbose
     "log_to_file": True,
     "log_file": "rdv_monitor.log"
 }
 
-# User agents adicionais (mais diversidade)
+# Additional user agents (more diversity)
 USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
@@ -52,7 +52,7 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0"
 ]
 
-# Headers adicionais para parecer mais humano
+# Additional headers to appear more human-like
 ADDITIONAL_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",

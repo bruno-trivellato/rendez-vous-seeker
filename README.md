@@ -1,145 +1,145 @@
-# 🎯 Monitor de Rendez-vous - Boulogne-Billancourt
+# 🎯 Rendez-vous Monitor - Boulogne-Billancourt
 
-Sistema automatizado para monitorar a disponibilidade de horários na prefeitura de Boulogne-Billancourt para agendamento de **Titre de Séjour**.
+Automated system to monitor appointment availability at the Boulogne-Billancourt city hall for **Titre de Séjour** scheduling.
 
-## 🚀 Como Funciona
+## 🚀 How It Works
 
-O sistema monitora a página de agendamento da prefeitura e detecta automaticamente quando novos horários ficam disponíveis, usando técnicas anti-detecção avançadas:
+The system monitors the city hall's appointment page and automatically detects when new time slots become available, using advanced anti-detection techniques:
 
-- **Refresh inteligente** com delays aleatórios (10-15 segundos)
-- **Rotação de User-Agents** para parecer mais humano
-- **Rotação de sessões** para evitar bloqueios
-- **Headers realistas** simulando navegador real
-- **Detecção de mudanças** no DOM da página
+- **Smart refresh** with random delays (10-15 seconds)
+- **User-Agent rotation** to appear more human-like
+- **Session rotation** to avoid blocks
+- **Realistic headers** simulating a real browser
+- **Change detection** in the page DOM
 
-## 📋 Pré-requisitos
+## 📋 Prerequisites
 
-- **macOS** (testado no MacBook Pro M4)
+- **macOS** (tested on MacBook Pro M4)
 - **Python 3.8+**
-- **Chrome** instalado
-- **pip3** para instalar dependências
+- **Chrome** installed
+- **pip3** to install dependencies
 
-## ⚙️ Instalação
+## ⚙️ Installation
 
-1. **Clone ou baixe os arquivos** para uma pasta
-2. **Execute o script de configuração**:
+1. **Clone or download the files** to a folder
+2. **Run the setup script**:
    ```bash
    chmod +x setup.sh
    ./setup.sh
    ```
 
-O script vai:
-- Verificar se Python 3 está instalado
-- Instalar todas as dependências necessárias
-- Configurar o ambiente
+The script will:
+- Check if Python 3 is installed
+- Install all necessary dependencies
+- Configure the environment
 
-## 🎮 Como Usar
+## 🎮 How to Use
 
-### Executar o Monitor
+### Run the Monitor
 ```bash
 python3 main.py
 ```
 
-### Parar o Monitor
-Pressione **Ctrl+C** a qualquer momento para parar graciosamente.
+### Stop the Monitor
+Press **Ctrl+C** at any time to stop gracefully.
 
-## 🔧 Funcionalidades
+## 🔧 Features
 
-### ✅ Monitoramento Inteligente
-- **Refresh inteligente** com delays aleatórios (10-15 segundos)
-- **Detecção de mudanças** no DOM da página
-- **Análise de disponibilidade** baseada em palavras-chave francesas
-- **Hash da página** para detectar mudanças reais
-- **Rotação automática** de sessões e User-Agents
+### ✅ Smart Monitoring
+- **Smart refresh** with random delays (10-15 seconds)
+- **Change detection** in the page DOM
+- **Availability analysis** based on French keywords
+- **Page hash** to detect real changes
+- **Automatic rotation** of sessions and User-Agents
 
-### 🎯 Detecção de Disponibilidade
-O sistema procura por:
-- Botões com texto: "disponible", "réserver", "choisir", "creneau"
-- Links de agendamento
-- Mensagens de disponibilidade
-- Elementos que indicam horários livres
+### 🎯 Availability Detection
+The system looks for:
+- Buttons with text: "disponible", "réserver", "choisir", "creneau"
+- Appointment links
+- Availability messages
+- Elements indicating free time slots
 
-### 🛑 Controle Fácil
-- **Ctrl+C** para parar instantaneamente
-- **Logs detalhados** com timestamp
-- **Contador de verificações**
-- **Notificações claras** quando detecta mudanças
+### 🛑 Easy Control
+- **Ctrl+C** to stop instantly
+- **Detailed logs** with timestamp
+- **Check counter**
+- **Clear notifications** when changes are detected
 
-## 📊 Exemplo de Saída
+## 📊 Example Output
 
 ```
-🎯 MONITOR DE RENDEZ-VOUS - BOULOGNE-BILLANCOURT
+🎯 RENDEZ-VOUS MONITOR - BOULOGNE-BILLANCOURT
 ============================================================
-🚀 Iniciando monitor de Rendez-vous...
+🚀 Starting Rendez-vous monitor...
 📍 URL: https://www.rdv-prefecture.interieur.gouv.fr/rdvpref/reservation/demarche/3720/creneau/
-⏱️  Intervalo de verificação: 5 segundos
-🛑 Pressione Ctrl+C para parar
+⏱️  Check interval: 5 seconds
+🛑 Press Ctrl+C to stop
 
-✅ Página carregada inicialmente
-[14:30:15] Verificação #1 - Sem mudanças
-[14:30:20] Verificação #2 - Sem mudanças
-[14:30:25] Verificação #3 - Sem mudanças
+✅ Page loaded initially
+[14:30:15] Check #1 - No changes
+[14:30:20] Check #2 - No changes
+[14:30:25] Check #3 - No changes
 
-🔄 [14:30:30] MUDANÇA DETECTADA! (Verificação #4)
-🎉 HORÁRIOS DISPONÍVEIS ENCONTRADOS!
-📝 Detalhes: Botão encontrado: Réserver
-🔗 Abra o navegador manualmente para agendar!
+🔄 [14:30:30] CHANGE DETECTED! (Check #4)
+🎉 AVAILABLE SLOTS FOUND!
+📝 Details: Button found: Réserver
+🔗 Open the browser manually to schedule!
 ```
 
-## ⚡ Configurações Avançadas
+## ⚡ Advanced Settings
 
-### Alterar Intervalo de Verificação
-Edite o arquivo `rdv_monitor.py` e mude a linha:
+### Change Check Interval
+Edit the `rdv_monitor.py` file and change the line:
 ```python
-refresh_interval = 5  # segundos
+refresh_interval = 5  # seconds
 ```
 
-### Personalizar Indicadores de Disponibilidade
-Edite a lista `availability_indicators` no método `check_for_availability()`.
+### Customize Availability Indicators
+Edit the `availability_indicators` list in the `check_for_availability()` method.
 
 ## 🔍 Troubleshooting
 
-### Erro: "ChromeDriver not found"
-- O sistema baixa automaticamente o ChromeDriver
-- Se falhar, instale manualmente: `brew install chromedriver`
+### Error: "ChromeDriver not found"
+- The system downloads ChromeDriver automatically
+- If it fails, install manually: `brew install chromedriver`
 
-### Erro: "Permission denied"
-- Execute: `chmod +x rdv_monitor.py`
+### Error: "Permission denied"
+- Run: `chmod +x rdv_monitor.py`
 
-### Página não carrega
-- Verifique sua conexão com a internet
-- A URL pode ter mudado - verifique no site oficial
+### Page doesn't load
+- Check your internet connection
+- The URL may have changed - check the official website
 
-## 🎯 Dicas de Uso
+## 🎯 Usage Tips
 
-1. **Execute em segundo plano** enquanto trabalha
-2. **Mantenha o terminal visível** para ver as notificações
-3. **Tenha o site oficial aberto** em outra aba para agendar rapidamente
-4. **Use em horários de pico** (manhãs, início de semana)
+1. **Run in background** while working
+2. **Keep the terminal visible** to see notifications
+3. **Have the official site open** in another tab for quick scheduling
+4. **Use during peak hours** (mornings, beginning of week)
 
 ## 📝 Logs
 
-O sistema mantém logs detalhados:
-- Timestamp de cada verificação
-- Número da verificação
-- Mudanças detectadas
-- Erros (se houver)
+The system maintains detailed logs:
+- Timestamp of each check
+- Check number
+- Detected changes
+- Errors (if any)
 
-## 🔒 Segurança
+## 🔒 Security
 
-- **Não armazena dados pessoais**
-- **Não faz login automático**
-- **Apenas monitora a página pública**
-- **Para imediatamente com Ctrl+C**
+- **Does not store personal data**
+- **Does not perform automatic login**
+- **Only monitors the public page**
+- **Stops immediately with Ctrl+C**
 
-## 🆘 Suporte
+## 🆘 Support
 
-Se encontrar problemas:
-1. Verifique se todas as dependências estão instaladas
-2. Confirme que o Chrome está atualizado
-3. Teste a URL manualmente no navegador
-4. Verifique se a URL não mudou no site oficial
+If you encounter problems:
+1. Check if all dependencies are installed
+2. Confirm Chrome is updated
+3. Test the URL manually in the browser
+4. Check if the URL hasn't changed on the official website
 
 ---
 
-**Boa sorte com seu agendamento! 🍀** 
+**Good luck with your appointment! 🍀** 

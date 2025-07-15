@@ -1,5 +1,5 @@
 """
-Gerenciador do ChromeDriver com suporte a Mac ARM64 e anti-detecção
+ChromeDriver manager with Mac ARM64 support and anti-detection
 """
 import platform
 import os
@@ -10,7 +10,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -19,188 +19,189 @@ from .utils import logger, anti_detection
 
 
 class DriverManager:
-    """Gerenciador do ChromeDriver com configurações avançadas"""
+    """ChromeDriver manager with advanced configurations"""
     
     def __init__(self):
         self.driver: Optional[webdriver.Chrome] = None
         self.driver_path: Optional[str] = None
     
     def setup_driver(self) -> webdriver.Chrome:
-        """Configura e retorna uma instância do ChromeDriver"""
+        """Configures and returns a ChromeDriver instance"""
         try:
             chrome_options = self._create_chrome_options()
             service = self._create_chrome_service()
             
-            logger.info("🚀 Iniciando ChromeDriver...")
+            logger.info("🚀 Starting ChromeDriver...")
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             
-            # Configura timeouts
+            # Configure timeouts
             self.driver.set_page_load_timeout(config.monitoring.timeout)
             self.driver.implicitly_wait(10)
             
-            logger.info("✅ ChromeDriver iniciado com sucesso")
+            logger.info("✅ ChromeDriver started successfully")
             return self.driver
             
         except Exception as e:
-            logger.error(f"❌ Erro ao configurar ChromeDriver: {e}")
+            logger.error(f"❌ Error setting up ChromeDriver: {e}")
             raise
     
     def _create_chrome_options(self) -> Options:
-        """Cria opções do Chrome com configurações anti-detecção"""
+        """Creates Chrome options with anti-detection configurations"""
         options = Options()
         
-        # Configurações básicas
+        # Basic configurations
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument(f"--window-size={config.chrome.window_size}")
         
-        # User agent rotativo
+        # Rotating user agent
         user_agent = anti_detection.get_next_user_agent()
         options.add_argument(f"--user-agent={user_agent}")
         
-        # Desabilitar imagens para carregar mais rápido
+        # Disable images to load faster
         if config.chrome.disable_images:
             prefs = {"profile.managed_default_content_settings.images": 2}
             options.add_experimental_option("prefs", prefs)
         
-        # Configurações anti-detecção
+        # Anti-detection configurations
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         
-        # Headers adicionais
-        for key, value in config.anti_detection.additional_headers.items():
-            options.add_argument(f"--header={key}: {value}")
+        # Additional headers
+        if config.anti_detection.additional_headers:
+            for key, value in config.anti_detection.additional_headers.items():
+                options.add_argument(f"--header={key}: {value}")
         
-        # Configurações de rede
+        # Network configurations
         options.add_argument("--disable-web-security")
         options.add_argument("--allow-running-insecure-content")
         
         return options
     
     def _create_chrome_service(self) -> Service:
-        """Cria serviço do Chrome com suporte a Mac ARM64"""
+        """Creates Chrome service with Mac ARM64 support"""
         try:
-            # Detecta se é Mac ARM
+            # Detect if it's Mac ARM
             if platform.system() == "Darwin" and platform.machine() == "arm64":
-                logger.info("🍎 Detectado Mac ARM64 - Configurando ChromeDriver específico...")
+                logger.info("🍎 Mac ARM64 detected - Configuring specific ChromeDriver...")
                 return self._setup_mac_arm_driver()
             else:
-                logger.info("🖥️  Sistema detectado - Usando ChromeDriver padrão...")
+                logger.info("🖥️  System detected - Using standard ChromeDriver...")
                 return self._setup_standard_driver()
                 
         except Exception as e:
-            logger.error(f"❌ Erro ao criar serviço do Chrome: {e}")
+            logger.error(f"❌ Error creating Chrome service: {e}")
             raise
     
     def _setup_mac_arm_driver(self) -> Service:
-        """Configura ChromeDriver específico para Mac ARM64"""
+        """Configures specific ChromeDriver for Mac ARM64"""
         try:
-            # Limpa cache anterior se existir
+            # Clear previous cache if it exists
             cache_path = os.path.expanduser("~/.wdm")
             if os.path.exists(cache_path):
                 import shutil
                 shutil.rmtree(cache_path)
-                logger.info("🧹 Cache do webdriver-manager limpo")
+                logger.info("🧹 webdriver-manager cache cleared")
             
-            # Baixa o ChromeDriver
+            # Download ChromeDriver
             driver_path = ChromeDriverManager().install()
-            logger.info(f"✅ ChromeDriver baixado: {driver_path}")
+            logger.info(f"✅ ChromeDriver downloaded: {driver_path}")
             
-            # Corrige o caminho se necessário
+            # Fix path if necessary
             if "THIRD_PARTY_NOTICES" in driver_path:
                 correct_path = driver_path.replace("THIRD_PARTY_NOTICES.chromedriver", "chromedriver")
-                logger.info(f"🔧 Corrigindo caminho para: {correct_path}")
+                logger.info(f"🔧 Fixing path to: {correct_path}")
                 driver_path = correct_path
             
-            # Corrige permissões
+            # Fix permissions
             self._fix_driver_permissions(driver_path)
             
             self.driver_path = driver_path
             return Service(driver_path)
             
         except Exception as e:
-            logger.error(f"❌ Erro ao configurar driver Mac ARM: {e}")
+            logger.error(f"❌ Error setting up Mac ARM driver: {e}")
             raise
     
     def _setup_standard_driver(self) -> Service:
-        """Configura ChromeDriver padrão para outros sistemas"""
+        """Configures standard ChromeDriver for other systems"""
         try:
             driver_path = ChromeDriverManager().install()
-            logger.info(f"✅ ChromeDriver baixado: {driver_path}")
+            logger.info(f"✅ ChromeDriver downloaded: {driver_path}")
             
             self.driver_path = driver_path
             return Service(driver_path)
             
         except Exception as e:
-            logger.error(f"❌ Erro ao configurar driver padrão: {e}")
+            logger.error(f"❌ Error setting up standard driver: {e}")
             raise
     
     def _fix_driver_permissions(self, driver_path: str):
-        """Corrige permissões do ChromeDriver"""
+        """Fixes ChromeDriver permissions"""
         try:
-            # Verifica se o arquivo existe
+            # Check if file exists
             if not os.path.exists(driver_path):
-                logger.error(f"❌ Arquivo do driver não encontrado: {driver_path}")
+                logger.error(f"❌ Driver file not found: {driver_path}")
                 return
             
-            # Verifica permissões atuais
+            # Check current permissions
             stat = os.stat(driver_path)
-            if not (stat.st_mode & 0o111):  # Se não é executável
-                logger.info(f"🔧 Corrigindo permissões para: {driver_path}")
+            if not (stat.st_mode & 0o111):  # If not executable
+                logger.info(f"🔧 Fixing permissions for: {driver_path}")
                 
-                # Tenta com chmod normal
+                # Try with normal chmod
                 try:
                     subprocess.run(["chmod", "+x", driver_path], check=True)
-                    logger.info("✅ Permissões corrigidas")
+                    logger.info("✅ Permissions fixed")
                 except subprocess.CalledProcessError:
-                    # Se falhar, tenta com sudo
-                    logger.warning("⚠️  Tentando corrigir permissões com sudo...")
+                    # If it fails, try with sudo
+                    logger.warning("⚠️  Trying to fix permissions with sudo...")
                     subprocess.run(["sudo", "chmod", "+x", driver_path], check=True)
-                    logger.info("✅ Permissões corrigidas com sudo")
+                    logger.info("✅ Permissions fixed with sudo")
             
         except Exception as e:
-            logger.error(f"❌ Erro ao corrigir permissões: {e}")
+            logger.error(f"❌ Error fixing permissions: {e}")
     
     def rotate_session(self):
-        """Rotaciona a sessão do driver (fecha e reabre)"""
+        """Rotates the driver session (closes and reopens)"""
         if self.driver:
             try:
-                logger.info("🔄 Rotacionando sessão do ChromeDriver...")
+                logger.info("🔄 Rotating ChromeDriver session...")
                 self.driver.quit()
-                time.sleep(2)  # Aguarda fechamento
+                time.sleep(2)  # Wait for closure
                 
-                # Reseta contadores anti-detecção
+                # Reset anti-detection counters
                 anti_detection.reset_session()
                 
-                # Recria o driver
+                # Recreate driver
                 self.setup_driver()
-                logger.info("✅ Sessão rotacionada com sucesso")
+                logger.info("✅ Session rotated successfully")
                 
             except Exception as e:
-                logger.error(f"❌ Erro ao rotacionar sessão: {e}")
+                logger.error(f"❌ Error rotating session: {e}")
     
     def quit(self):
-        """Fecha o driver"""
+        """Closes the driver"""
         if self.driver:
             try:
                 self.driver.quit()
-                logger.info("🛑 ChromeDriver fechado")
+                logger.info("🛑 ChromeDriver closed")
             except Exception as e:
-                logger.error(f"❌ Erro ao fechar ChromeDriver: {e}")
+                logger.error(f"❌ Error closing ChromeDriver: {e}")
     
     def get_driver(self) -> Optional[webdriver.Chrome]:
-        """Retorna a instância atual do driver"""
+        """Returns the current driver instance"""
         return self.driver
     
     def is_healthy(self) -> bool:
-        """Verifica se o driver está funcionando"""
+        """Checks if the driver is working"""
         if not self.driver:
             return False
         
         try:
-            # Tenta executar um comando simples
+            # Tries to execute a simple command
             self.driver.current_url
             return True
         except Exception:
