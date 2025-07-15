@@ -259,6 +259,11 @@ class DriverManager:
                 preview = page_source[:500].replace('\n', ' ').replace('\r', ' ')
                 logger.debug(f"📄 Page preview: {preview}...")
                 
+                # Log complete page source for debugging
+                logger.debug("📄 === COMPLETE PAGE SOURCE ===")
+                logger.debug(page_source)
+                logger.debug("📄 === END COMPLETE PAGE SOURCE ===")
+                
             except Exception as e:
                 logger.debug(f"❌ Could not get page source: {e}")
             
@@ -297,6 +302,11 @@ class DriverManager:
             
             # Get full page source
             page_source = self.driver.page_source
+            
+            # Log complete blocked page source
+            logger.debug("🚫 === COMPLETE BLOCKED PAGE SOURCE ===")
+            logger.debug(page_source)
+            logger.debug("🚫 === END COMPLETE BLOCKED PAGE SOURCE ===")
             
             # Look for specific Cloudflare indicators
             cloudflare_indicators = [
