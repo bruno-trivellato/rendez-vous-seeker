@@ -385,8 +385,7 @@ class DriverManager:
             self.driver.get("data:text/html,<html><body>Cookie Test</body></html>")
             self.driver.add_cookie({
                 'name': 'test_cookie',
-                'value': 'enabled',
-                'domain': 'localhost'
+                'value': 'enabled'
             })
             
             # Verify cookie was set
