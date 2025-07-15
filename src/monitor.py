@@ -5,6 +5,7 @@ import time
 import signal
 import sys
 import hashlib
+from enum import Enum
 from typing import Tuple, Optional
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -17,6 +18,15 @@ from .driver_manager import DriverManager
 from .page_detector import page_detector, PageType
 
 
+class MonitorState(Enum):
+    """States of the monitoring process"""
+    INITIAL = "initial"
+    NAVIGATING = "navigating"
+    CAPTCHA_WAIT = "captcha_wait"
+    MONITORING = "monitoring"
+    AVAILABLE = "available"
+
+
 class RDVMonitor:
     """Main monitor to detect appointment availability"""
     
@@ -26,6 +36,8 @@ class RDVMonitor:
         self.last_page_hash: Optional[str] = None
         self.check_count = 0
         self.start_time = time.time()
+        self.state = MonitorState.INITIAL
+        self.initial_page_url = config.monitoring.url
         
         # Configure signal handler to stop gracefully
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -99,13 +111,13 @@ class RDVMonitor:
             self.driver_manager.quit()
     
     def _monitoring_loop(self, driver):
-        """Main monitoring loop"""
+        """Main monitoring loop with state management"""
         while self.running:
             try:
-                logger.debug(f"🔄 Starting check #{self.check_count + 1}")
+                logger.debug(f"🔄 Starting check #{self.check_count + 1} (State: {self.state.value})")
                 
-                # Check if session should be rotated
-                if anti_detection.should_rotate_session():
+                # Check if session should be rotated (only during monitoring, not during captcha wait)
+                if self.state != MonitorState.CAPTCHA_WAIT and anti_detection.should_rotate_session():
                     logger.info("🔄 Rotating session for security...")
                     logger.debug(f"📊 Request count: {anti_detection.request_count}")
                     self.driver_manager.rotate_session()
@@ -114,10 +126,11 @@ class RDVMonitor:
                         logger.error("❌ Failed to get driver after rotation")
                         continue
                     logger.debug("🌐 Loading page after session rotation...")
-                    driver.get(config.monitoring.url)
+                    driver.get(self.initial_page_url)
+                    self.state = MonitorState.INITIAL
                 
-                # Page refresh
-                if driver is not None:
+                # Page refresh (only if not waiting for captcha)
+                if driver is not None and self.state != MonitorState.CAPTCHA_WAIT:
                     logger.debug("🔄 Refreshing page...")
                     driver.refresh()
                     logger.debug("⏳ Waiting for page refresh...")
@@ -149,7 +162,7 @@ class RDVMonitor:
                     
                     timestamp = time_utils.get_timestamp()
                     
-                    # Log based on page type
+                    # Handle different page types based on current state
                     if page_type == PageType.BLOCKED:
                         logger.warning(f"🚫 [{timestamp}] BLOCKED! {page_info['description']}")
                         logger.warning(f"📋 Reason: {page_info.get('blocked_reason', 'Not specified')}")
@@ -179,86 +192,112 @@ class RDVMonitor:
                         continue
                         
                     elif page_type == PageType.CAPTCHA:
-                        logger.warning(f"\n🔐 [{timestamp}] CAPTCHA DETECTED! (Check #{self.check_count})")
-                        logger.warning(f"📝 {page_info['description']}")
+                        if self.state != MonitorState.CAPTCHA_WAIT:
+                            logger.warning(f"\n🔐 [{timestamp}] CAPTCHA DETECTED! (Check #{self.check_count})")
+                            logger.warning(f"📝 {page_info['description']}")
+                            
+                            # Sound and visual notification
+                            notification_utils.play_sound()
+                            notification_utils.show_notification(
+                                "RDV Monitor - CAPTCHA", 
+                                "Manual intervention required! Type the captcha."
+                            )
+                            
+                            self.state = MonitorState.CAPTCHA_WAIT
+                            logger.info("🔐 Type the captcha manually and press Enter to continue...")
+                            input("Press Enter when you finish the captcha...")
+                            
+                            # After captcha, transition to monitoring state
+                            self.state = MonitorState.MONITORING
+                            logger.info("✅ Captcha completed! Starting availability monitoring...")
+                        else:
+                            logger.info(f"⏳ [{timestamp}] Waiting for captcha completion...")
                         
-                        # Sound and visual notification
-                        notification_utils.play_sound()
-                        notification_utils.show_notification(
-                            "RDV Monitor - CAPTCHA", 
-                            "Manual intervention required! Type the captcha."
-                        )
-                        
-                        logger.info("🔐 Type the captcha manually and press Enter to continue...")
-                        input("Press Enter when you finish the captcha...")
                         continue
                         
                     elif page_type == PageType.INITIAL:
-                        logger.info(f"\n🏠 [{timestamp}] INITIAL PAGE DETECTED! (Check #{self.check_count})")
-                        logger.info(f"📝 {page_info['description']}")
-                        
-                        # Try to click the "Prendre un rendez-vous" button
-                        try:
-                            from selenium.webdriver.common.by import By
-                            buttons = driver.find_elements(By.TAG_NAME, "a")
-                            for button in buttons:
-                                if "prendre un rendez-vous" in button.text.lower():
-                                    logger.info("🔘 Clicking on 'Prendre un rendez-vous'...")
-                                    button.click()
-                                    time.sleep(3)  # Wait for loading
-                                    break
+                        if self.state == MonitorState.INITIAL:
+                            logger.info(f"\n🏠 [{timestamp}] INITIAL PAGE DETECTED! (Check #{self.check_count})")
+                            logger.info(f"📝 {page_info['description']}")
+                            
+                            # Try to click the "Prendre un rendez-vous" button
+                            if self._click_prendre_rdv_button(driver):
+                                self.state = MonitorState.NAVIGATING
+                                logger.info("🔘 Successfully clicked 'Prendre un rendez-vous'")
+                                logger.info("⏳ Navigating to appointment page...")
                             else:
-                                logger.warning("⚠️  'Prendre un rendez-vous' button not found")
-                        except Exception as e:
-                            logger.error(f"❌ Error clicking button: {e}")
+                                logger.warning("⚠️  Could not find 'Prendre un rendez-vous' button")
+                                logger.info("🔄 Will retry on next check...")
+                        else:
+                            logger.info(f"🏠 [{timestamp}] Back to initial page - retrying navigation...")
+                            if self._click_prendre_rdv_button(driver):
+                                self.state = MonitorState.NAVIGATING
+                                logger.info("🔘 Successfully clicked 'Prendre un rendez-vous'")
                         
                         continue
                         
                     elif page_type == PageType.AVAILABLE:
-                        logger.info(f"\n🎉 [{timestamp}] AVAILABLE SLOTS! (Check #{self.check_count})")
-                        logger.info(f"📝 Details: {page_info['description']}")
-                        
-                        # Sound and visual notification
-                        notification_utils.play_sound()
-                        notification_utils.show_notification(
-                            "RDV Monitor - AVAILABLE SLOTS!", 
-                            "Open the browser to schedule!"
-                        )
-                        
-                        # Show availability details
-                        availability_details = page_info.get('availability_details', {})
-                        if availability_details.get('buttons'):
-                            logger.info(f"🔘 Buttons: {', '.join(availability_details['buttons'])}")
-                        if availability_details.get('links'):
-                            logger.info(f"🔗 Links: {', '.join(availability_details['links'])}")
-                        
-                        logger.info("🔗 Open the browser manually to schedule!")
-                        
-                        # Keep the page open for the user
-                        input("\nPress Enter to continue monitoring or Ctrl+C to stop...")
+                        if self.state == MonitorState.MONITORING:
+                            logger.info(f"\n🎉 [{timestamp}] AVAILABLE SLOTS! (Check #{self.check_count})")
+                            logger.info(f"📝 Details: {page_info['description']}")
+                            
+                            # Sound and visual notification
+                            notification_utils.play_sound()
+                            notification_utils.show_notification(
+                                "RDV Monitor - AVAILABLE SLOTS!", 
+                                "Open the browser to schedule!"
+                            )
+                            
+                            # Show availability details
+                            availability_details = page_info.get('availability_details', {})
+                            if availability_details.get('buttons'):
+                                logger.info(f"🔘 Buttons: {', '.join(availability_details['buttons'])}")
+                            if availability_details.get('links'):
+                                logger.info(f"🔗 Links: {', '.join(availability_details['links'])}")
+                            
+                            logger.info("🔗 Open the browser manually to schedule!")
+                            
+                            self.state = MonitorState.AVAILABLE
+                            
+                            # Keep the page open for the user
+                            input("\nPress Enter to continue monitoring or Ctrl+C to stop...")
+                            self.state = MonitorState.MONITORING  # Resume monitoring
+                        else:
+                            logger.info(f"🎉 [{timestamp}] Available slots detected but not in monitoring state")
                         
                     elif page_type == PageType.UNAVAILABLE:
-                        if current_hash != self.last_page_hash:
-                            logger.info(f"\n🔄 [{timestamp}] CHANGE DETECTED! (Check #{self.check_count})")
-                            logger.info(f"ℹ️  {page_info['description']}")
-                            self.last_page_hash = current_hash
-                        else:
-                            if config.logging.show_check_count:
-                                logger.info(f"[{timestamp}] Check #{self.check_count} - {page_info['description']}")
+                        if self.state == MonitorState.MONITORING:
+                            if current_hash != self.last_page_hash:
+                                logger.info(f"\n🔄 [{timestamp}] CHANGE DETECTED! (Check #{self.check_count})")
+                                logger.info(f"ℹ️  {page_info['description']}")
+                                self.last_page_hash = current_hash
                             else:
-                                logger.info(f"[{timestamp}] {page_info['description']}")
+                                if config.logging.show_check_count:
+                                    logger.info(f"[{timestamp}] Check #{self.check_count} - {page_info['description']}")
+                                else:
+                                    logger.info(f"[{timestamp}] {page_info['description']}")
+                        elif self.state == MonitorState.NAVIGATING:
+                            logger.info(f"📄 [{timestamp}] Navigated to appointment page - {page_info['description']}")
+                            self.state = MonitorState.MONITORING
+                            logger.info("✅ Starting availability monitoring...")
+                        else:
+                            logger.info(f"📄 [{timestamp}] {page_info['description']}")
                                 
                     else:  # UNKNOWN or others
                         logger.warning(f"❓ [{timestamp}] Unknown page: {page_info['description']}")
                         logger.info(f"📄 Title: {page_info['title']}")
                         logger.info(f"🔗 URL: {page_info['url']}")
                 
-                # Delay before next check
-                self._smart_delay()
+                # Delay before next check (only if not waiting for captcha)
+                if self.state != MonitorState.CAPTCHA_WAIT:
+                    self._smart_delay()
+                else:
+                    time.sleep(1)  # Short delay when waiting for captcha
                 
             except Exception as e:
                 logger.error(f"❌ Error during monitoring: {e}")
-                self._smart_delay()
+                if self.state != MonitorState.CAPTCHA_WAIT:
+                    self._smart_delay()
     
     def _get_page_hash(self, driver) -> Optional[str]:
         """Generates a hash of the page content to detect changes"""
@@ -357,11 +396,61 @@ class RDVMonitor:
         else:
             time.sleep(config.monitoring.base_interval)
     
+    def _click_prendre_rdv_button(self, driver) -> bool:
+        """Tries to click the 'Prendre un rendez-vous' button"""
+        try:
+            logger.debug("🔍 Looking for 'Prendre un rendez-vous' button...")
+            
+            # Try different selectors for the button
+            selectors = [
+                "a[href*='prendre']",
+                "a[href*='rdv']", 
+                "a[href*='rendez-vous']",
+                "button[onclick*='prendre']",
+                "button[onclick*='rdv']",
+                "a",
+                "button"
+            ]
+            
+            for selector in selectors:
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    element_text = element.text.lower().strip()
+                    if any(keyword in element_text for keyword in [
+                        "prendre un rendez-vous",
+                        "prendre rendez-vous", 
+                        "prendre rdv",
+                        "prendre un rdv",
+                        "rendez-vous",
+                        "rdv"
+                    ]):
+                        logger.info(f"🔘 Found button: '{element.text}'")
+                        logger.debug(f"🔘 Clicking element with selector: {selector}")
+                        
+                        # Scroll to element
+                        driver.execute_script("arguments[0].scrollIntoView(true);", element)
+                        time.sleep(0.5)
+                        
+                        # Click the element
+                        element.click()
+                        time.sleep(3)  # Wait for navigation
+                        
+                        logger.debug("✅ Button clicked successfully")
+                        return True
+            
+            logger.debug("❌ 'Prendre un rendez-vous' button not found")
+            return False
+            
+        except Exception as e:
+            logger.error(f"❌ Error clicking 'Prendre un rendez-vous' button: {e}")
+            return False
+    
     def get_stats(self) -> dict:
         """Returns monitoring statistics"""
         uptime = time.time() - self.start_time
         return {
             "check_count": self.check_count,
             "uptime": time_utils.format_duration(uptime),
-            "checks_per_minute": self.check_count / (uptime / 60) if uptime > 0 else 0
+            "checks_per_minute": self.check_count / (uptime / 60) if uptime > 0 else 0,
+            "current_state": self.state.value
         } 

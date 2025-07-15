@@ -4,13 +4,21 @@ Automated system to monitor appointment availability at the Boulogne-Billancourt
 
 ## 🚀 How It Works
 
-The system monitors the city hall's appointment page and automatically detects when new time slots become available, using advanced anti-detection techniques:
+The system monitors the city hall's appointment page with an intelligent state-based approach:
 
+### 🔄 **Smart Navigation Flow**
+1. **Initial State**: Loads the main page and automatically clicks "Prendre un rendez-vous"
+2. **Navigation State**: Waits for the page to load after clicking the button
+3. **Captcha Wait State**: When captcha appears, stops refreshing and waits for manual input
+4. **Monitoring State**: After captcha, monitors the appointment page for availability changes
+
+### 🛡️ **Anti-Detection Features**
 - **Smart refresh** with random delays (10-15 seconds)
 - **User-Agent rotation** to appear more human-like
 - **Session rotation** to avoid blocks
 - **Realistic headers** simulating a real browser
 - **Change detection** in the page DOM
+- **State-based monitoring** to avoid unnecessary refreshes during captcha
 
 ## 📋 Prerequisites
 
@@ -39,6 +47,13 @@ The script will:
 ```bash
 python3 main.py
 ```
+
+### 🔄 **New Smart Flow**
+1. **Automatic Navigation**: The system automatically clicks "Prendre un rendez-vous"
+2. **Captcha Handling**: When captcha appears, the system stops refreshing and waits
+3. **Manual Captcha**: Type the captcha manually in the browser
+4. **Press Enter**: After completing captcha, press Enter in the terminal
+5. **Automatic Monitoring**: The system resumes monitoring for available slots
 
 ### Stop the Monitor
 Press **Ctrl+C** at any time to stop gracefully.
@@ -76,11 +91,25 @@ The system looks for:
 🛑 Press Ctrl+C to stop
 
 ✅ Page loaded initially
-[14:30:15] Check #1 - No changes
-[14:30:20] Check #2 - No changes
-[14:30:25] Check #3 - No changes
+[14:30:15] Check #1 (State: initial) - INITIAL PAGE DETECTED!
+🔘 Found button: 'Prendre un rendez-vous'
+🔘 Successfully clicked 'Prendre un rendez-vous'
+⏳ Navigating to appointment page...
 
-🔄 [14:30:30] CHANGE DETECTED! (Check #4)
+[14:30:20] Check #2 (State: navigating) - Navigated to appointment page
+✅ Starting availability monitoring...
+
+[14:30:25] Check #3 (State: monitoring) - No changes
+
+🔐 [14:30:30] CAPTCHA DETECTED! (Check #4)
+🔐 Type the captcha manually and press Enter to continue...
+[User types captcha and presses Enter]
+✅ Captcha completed! Starting availability monitoring...
+
+[14:30:35] Check #5 (State: monitoring) - No changes
+[14:30:40] Check #6 (State: monitoring) - No changes
+
+🔄 [14:30:45] CHANGE DETECTED! (Check #7)
 🎉 AVAILABLE SLOTS FOUND!
 📝 Details: Button found: Réserver
 🔗 Open the browser manually to schedule!
