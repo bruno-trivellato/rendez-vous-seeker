@@ -187,6 +187,26 @@ class NotificationUtils:
                             # Fallback to default sound
                             subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
                                          capture_output=True, timeout=5)
+                    elif sound_type == "appointment_check":
+                        # Use custom sound for appointment check (every 10 checks) - randomly choose between v1 and v2
+                        import random
+                        sound_files = [
+                            os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "appointment_check_sound.mp3"),
+                            os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "appointment_check_sound_v2.mp3")
+                        ]
+                        
+                        # Filter only existing files
+                        existing_sounds = [f for f in sound_files if os.path.exists(f)]
+                        
+                        if existing_sounds:
+                            # Randomly choose one of the available sounds
+                            chosen_sound = random.choice(existing_sounds)
+                            subprocess.run(['afplay', chosen_sound], 
+                                         capture_output=True, timeout=10)
+                        else:
+                            # Fallback to default sound
+                            subprocess.run(['afplay', '/System/Library/Sounds/Ping.aiff'], 
+                                         capture_output=True, timeout=5)
                     elif sound_type == "captcha":
                         # Use custom sound for captcha
                         sound_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "captcha_sound.mp3")

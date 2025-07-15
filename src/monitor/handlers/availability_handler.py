@@ -10,6 +10,9 @@ from ...utils import logger, notification_utils
 class AvailabilityHandler:
     """Handles availability detection and notifications"""
     
+    # Class variable to track appointment page checks
+    appointment_page_check_count = 0
+    
     @staticmethod
     def check_availability(driver: WebDriver) -> Tuple[bool, str]:
         """Checks if there are available slots on the page"""
@@ -68,6 +71,14 @@ class AvailabilityHandler:
     def handle_appointment_page_check(driver: WebDriver, timestamp: str, check_count: int) -> Tuple[bool, str]:
         """Handles checking appointment page for availability"""
         logger.info(f"📄 [{timestamp}] Appointment page detected - checking for available slots...")
+        
+        # Increment appointment page check counter
+        AvailabilityHandler.appointment_page_check_count += 1
+        
+        # Play appointment check sound every 10 checks
+        if AvailabilityHandler.appointment_page_check_count % 10 == 0:
+            logger.info(f"🎵 [{timestamp}] Playing appointment check sound (Check #{AvailabilityHandler.appointment_page_check_count})")
+            notification_utils.play_sound(1, "appointment_check")
         
         # Check for available slots
         is_available, details = AvailabilityHandler.check_availability(driver)
