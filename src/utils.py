@@ -179,7 +179,7 @@ class NotificationUtils:
                 if os.name == 'posix':  # macOS/Linux
                     if sound_type == "availability":
                         # Use custom sound for availability
-                        sound_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "notification_sound.mp3")
+                        sound_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "availability_alert_sound.mp3")
                         if os.path.exists(sound_file):
                             subprocess.run(['afplay', sound_file], 
                                          capture_output=True, timeout=10)

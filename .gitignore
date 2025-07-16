@@ -45,6 +45,7 @@ Thumbs.db
 
 # Logs
 *.log
+rdv_monitor.log*
 logs/
 
 # Chrome Driver
