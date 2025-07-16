@@ -1,10 +1,27 @@
 # 🎯 Rendez-vous Monitor
 
-Automated appointment availability monitor for French city hall scheduling.
+**Automated appointment availability monitor for French city hall scheduling using Selenium WebDriver.**
 
 ## What it does
 
-Monitors the Boulogne-Billancourt city hall appointment page and alerts you when slots become available for **Titre de Séjour** scheduling.
+This system is a **Chrome bot** that automatically monitors the Boulogne-Billancourt city hall appointment page and alerts you when slots become available for **Titre de Séjour** scheduling.
+
+### How it works technically
+
+1. **Opens Chrome browser** using Selenium WebDriver (undetected-chromedriver)
+2. **Navigates to the appointment page** automatically
+3. **Refreshes the page continuously** (like pressing F5 repeatedly)
+4. **Detects when slots become available** by monitoring page content
+5. **Alerts you immediately** with sound and notifications when appointments are found
+
+## When to use it
+
+### ⏰ **Optimal Usage Time**
+According to the prefecture (sp-boulogne@hauts-de-seine.gouv.fr), appointments are typically released:
+- **Every Monday between 4:00 PM and 7:00 PM**
+- If Monday is a holiday, appointments are released the next business day
+
+**Recommendation**: Start the monitor 15-30 minutes before the expected release time.
 
 ## Quick Start
 
@@ -24,12 +41,42 @@ source .venv/bin/activate
 python main.py
 ```
 
-## How it works
+## How to use
 
-1. **Automatically navigates** to the appointment page
-2. **Handles CAPTCHA** - stops and waits for manual input
-3. **Monitors continuously** for available slots
-4. **Alerts you** with sound and notifications when slots are found
+1. **Start the monitor** using one of the methods above
+2. **When CAPTCHA appears**, solve it manually in the browser window
+3. **The system continues monitoring** automatically after CAPTCHA
+4. **When you hear the alert sound**, slots are available!
+5. **IMPORTANT**: Close the bot and open the appointment link in a **normal Chrome browser**
+6. **Press `Ctrl+C`** to stop the monitor
+
+### ⚠️ **Critical Tip**
+When the system alerts you that slots are available:
+- **Close the bot immediately**
+- **Open the appointment link in a normal Chrome browser** (not the bot's browser)
+- This avoids potential bot detection issues during the actual booking process
+
+## Required Information for Appointment
+
+When booking your appointment, you'll need to provide:
+
+### Personal Information
+- **First Name** (Prénom)
+- **Last Name** (Nom)
+- **Email Address**
+- **Phone Number**
+
+### Official Documents
+- **N° Étranger** (10-digit number)
+  - Get this from: https://administration-etrangers-en-france.interieur.gouv.fr/
+  - This is your official foreigner number
+
+### ⚠️ **Important Note for Boulogne-Billancourt**
+The Boulogne appointment system has an **incorrect instruction** asking for the **FTE number** (passport number). Be aware of this discrepancy.
+
+### After Booking
+- **Check your email** for appointment confirmation
+- **Confirm the appointment** by clicking the link in the email
 
 ## Features
 
@@ -54,17 +101,10 @@ Edit `src/config.py` to customize:
 
 ## Requirements
 
-- macOS (tested on M4 MacBook Pro)
-- Python 3.8+
-- Chrome browser
-- Internet connection
+- **macOS** (tested on M4 MacBook Pro)
+- **Python 3.8+**
+- **Chrome browser**
 
-## Usage
-
-1. Run `./start_monitor.sh` or `python main.py`
-2. When CAPTCHA appears, solve it manually in the browser
-3. The system will continue monitoring automatically
-4. Press `Ctrl+C` to stop
 
 ## Project Structure
 
@@ -86,19 +126,8 @@ src/
 └── utils.py          # General utilities
 ```
 
-## Audio Files
 
-The system includes custom sounds in `assets/`:
-- `availability_alert_sound.mp3` - When slots are found
-- `appointment_check_sound.mp3` - Periodic checks (version 1)
-- `appointment_check_sound_v2.mp3` - Periodic checks (version 2, random selection)
-- `captcha_sound.mp3` - When CAPTCHA appears
 
-## Troubleshooting
-
-- **ChromeDriver issues**: The system downloads it automatically
-- **Permission errors**: Run `chmod +x main.py`
-- **Page not loading**: Check internet connection and URL validity
 
 ---
 
