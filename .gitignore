@@ -56,10 +56,10 @@ chromedriver.exe
 *.tmp
 *.temp
 
-# Audio files
-*.mp3
-*.wav
-*.aiff
+# Audio files (keeping assets for project sounds)
+# *.mp3
+# *.wav
+# *.aiff
 
-# Assets folder (contains audio files)
-assets/ 
+# Assets folder (keeping for project sounds)
+# assets/ 
